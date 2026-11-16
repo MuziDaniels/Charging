@@ -1,0 +1,8 @@
+{
+  "name": "chargevault",
+  "private": true,
+  "description": "ChargeVault 20 event phone-charging tracker",
+  "dependencies": {
+    "@vercel/blob": "^2.9.0"
+  }
+}

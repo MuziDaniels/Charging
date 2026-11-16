@@ -1,6 +1,6 @@
 // ChargeVault 20 offline cache. Keeps the app and PDF tool available with no signal.
 // Customer data is NOT stored here; it stays in the browser's localStorage.
-const CACHE = 'chargevault-v2';
+const CACHE = 'chargevault-v3';
 const ASSETS = ['./', './index.html', './jspdf.umd.min.js', './jspdf.plugin.autotable.min.js'];
 
 self.addEventListener('install', e => {
@@ -13,7 +13,9 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  const url = new URL(req.url);
+  // Never cache the API: login and live data must always come from the server
+  if (req.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
   const isPage = req.mode === 'navigate' || req.url.endsWith('.html');
   if (isPage) {
     // Network first so updates show up, cached copy when offline
