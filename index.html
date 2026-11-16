@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>ChargeVault 20 — Event Locker Tracker</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --surface: #131a2a;
+      --surface-hover: #1b253b;
+      --border: #26334d;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --free-bg: rgba(16, 185, 129, 0.12);
+      --free-border: #10b981;
+      --free-text: #34d399;
+      --busy-bg: rgba(245, 158, 11, 0.14);
+      --busy-border: #f59e0b;
+      --busy-text: #fbbf24;
+      --over-bg: rgba(239, 68, 68, 0.18);
+      --over-border: #ef4444;
+      --over-text: #f87171;
+      --accent: #38bdf8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 92px;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(11, 15, 25, 0.94);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .brand h1 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand span {
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-ghost {
+      background: var(--surface);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-ghost:active {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat-pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      text-align: center;
+    }
+
+    .stat-pill .val {
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .stat-pill .lbl {
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 6px;
+      padding: 12px 16px 4px;
+      overflow-x: auto;
+    }
+
+    .filter-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .filter-chip.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      padding: 12px 16px;
+    }
+
+    @media (min-width: 640px) {
+      .grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .bay-card {
+      border-radius: 14px;
+      padding: 12px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 124px;
+      cursor: pointer;
+      transition: transform 0.08s ease;
+      position: relative;
+    }
+
+    .bay-card:active {
+      transform: scale(0.98);
+    }
+
+    .bay-card.free {
+      background: var(--free-bg);
+      border-color: rgba(16, 185, 129, 0.45);
+    }
+
+    .bay-card.charging {
+      background: var(--busy-bg);
+      border-color: var(--busy-border);
+    }
+
+    .bay-card.overdue {
+      background: var(--over-bg);
+      border-color: var(--over-border);
+      animation: pulseBorder 2s infinite;
+    }
+
+    @keyframes pulseBorder {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.35); }
+      50% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+    }
+
+    .bay-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .bay-num {
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .bay-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+
+    .free .bay-badge {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--free-text);
+    }
+
+    .charging .bay-badge {
+      background: rgba(245, 158, 11, 0.25);
+      color: var(--busy-text);
+    }
+
+    .overdue .bay-badge {
+      background: rgba(239, 68, 68, 0.25);
+      color: var(--over-text);
+    }
+
+    .bay-customer {
+      font-size: 0.92rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+
+    .bay-device {
+      font-size: 0.76rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 8px;
+    }
+
+    .bay-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .free-hint {
+      color: var(--free-text);
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-top: auto;
+    }
+
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(11, 15, 25, 0.96);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 25;
+    }
+
+    .rev-group {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .rev-item .r-lbl {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .rev-item .r-val {
+      font-size: 0.98rem;
+      font-weight: 800;
+    }
+
+    .rev-total .r-val {
+      color: var(--free-text);
+      font-size: 1.12rem;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.78);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    @media (min-width: 640px) {
+      .modal-backdrop {
+        align-items: center;
+      }
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 460px;
+      padding: 20px 18px 26px;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+
+    @media (min-width: 640px) {
+      .modal {
+        border-radius: 18px;
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .modal-header h2 {
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+
+    .close-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+
+    .field input {
+      width: 100%;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .field input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .seg-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .seg-btn {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      padding: 11px 10px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .seg-btn.selected {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--free-border);
+      color: #052e16;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+
+    .btn-release {
+      width: 100%;
+      background: #ef4444;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .detail-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 14px;
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 55vh;
+      overflow-y: auto;
+    }
+
+    .log-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="top-row">
+      <div class="brand">
+        <h1>ChargeVault 20 <span>OFFLINE READY</span></h1>
+      </div>
+      <div class="header-actions">
+        <button class="btn-ghost" onclick="openHistoryModal()">History</button>
+        <button class="btn-ghost" onclick="exportCSV()">Export CSV</button>
+      </div>
+    </div>
+    <div class="stats-strip">
+      <div class="stat-pill">
+        <div class="val" id="statFree" style="color: var(--free-text)">20</div>
+        <div class="lbl">Open Bays</div>
+      </div>
+      <div class="stat-pill">
+        <div class="val" id="statBusy" style="color: var(--busy-text)">0</div>
+        <div class="lbl">Charging</div>
+      </div>
+      <div class="stat-pill">
+        <div class="val" id="statOver" style="color: var(--over-text)">0</div>
+        <div class="lbl">Overdue</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="filter-bar">
+    <button class="filter-chip active" data-filter="all" onclick="setFilter('all', this)">All 20</button>
+    <button class="filter-chip" data-filter="free" onclick="setFilter('free', this)">Open Only</button>
+    <button class="filter-chip" data-filter="busy" onclick="setFilter('busy', this)">Occupied</button>
+    <button class="filter-chip" data-filter="overdue" onclick="setFilter('overdue', this)">Overdue</button>
+  </div>
+
+  <main class="grid" id="bayGrid"></main>
+
+  <div class="bottom-bar">
+    <div class="rev-group">
+      <div class="rev-item rev-total">
+        <div class="r-lbl">Total Shift</div>
+        <div class="r-val" id="revTotal">R0</div>
+      </div>
+      <div class="rev-item">
+        <div class="r-lbl">Cash</div>
+        <div class="r-val" id="revCash">R0</div>
+      </div>
+      <div class="rev-item">
+        <div class="r-lbl">Card / QR</div>
+        <div class="r-val" id="revCard">R0</div>
+      </div>
+    </div>
+    <button class="btn-ghost" onclick="resetShift()">Reset Shift</button>
+  </div>
+
+  <!-- Check-In / Active Bay Modal -->
+  <div class="modal-backdrop" id="bayModal" onclick="if(event.target===this) closeBayModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Bay #01</h2>
+        <button class="close-btn" onclick="closeBayModal()">&times;</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal-backdrop" id="historyModal" onclick="if(event.target===this) closeHistoryModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Shift Log (<span id="logCount">0</span>)</h2>
+        <button class="close-btn" onclick="closeHistoryModal()">&times;</button>
+      </div>
+      <div class="log-list" id="logList"></div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'chargevault_20_state_v1';
+
+    let state = {
+      bays: Array.from({ length: 20 }, (_, i) => ({
+        id: i + 1,
+        occupied: false,
+        customer: '',
+        device: '',
+        tierLabel: '',
+        price: 0,
+        durationMins: 0,
+        paymentMethod: 'Cash',
+        checkInTime: null
+      })),
+      history: []
+    };
+
+    let currentFilter = 'all';
+    let selectedBayId = null;
+    let formTier = { label: 'R30 (1 Hr)', price: 30, mins: 60 };
+    let formPay = 'Cash';
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && Array.isArray(parsed.bays) && parsed.bays.length === 20) {
+            state = parsed;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load saved state', e);
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.error('Failed to save state', e);
+      }
+    }
+
+    function pad(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function formatTime(ts) {
+      const d = new Date(ts);
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function getBayStatus(bay) {
+      if (!bay.occupied) return { status: 'free', label: 'OPEN', remainingText: '' };
+      if (!bay.durationMins || bay.durationMins === 0) {
+        const elapsed = Math.floor((Date.now() - bay.checkInTime) / 60000);
+        return { status: 'charging', label: 'FULL CHG', remainingText: `${elapsed}m in` };
+      }
+      const endTs = bay.checkInTime + bay.durationMins * 60000;
+      const diffMins = Math.ceil((endTs - Date.now()) / 60000);
+      if (diffMins <= 0) {
+        return { status: 'overdue', label: 'OVERDUE', remainingText: `+${Math.abs(diffMins)}m over` };
+      }
+      return { status: 'charging', label: 'CHARGING', remainingText: `${diffMins}m left` };
+    }
+
+    function setFilter(filter, btn) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    }
+
+    function render() {
+      const grid = document.getElementById('bayGrid');
+      grid.innerHTML = '';
+
+      let freeCount = 0;
+      let busyCount = 0;
+      let overCount = 0;
+
+      state.bays.forEach(bay => {
+        const info = getBayStatus(bay);
+        if (info.status === 'free') freeCount++;
+        else if (info.status === 'overdue') { busyCount++; overCount++; }
+        else busyCount++;
+
+        if (currentFilter === 'free' && info.status !== 'free') return;
+        if (currentFilter === 'busy' && info.status === 'free') return;
+        if (currentFilter === 'overdue' && info.status !== 'overdue') return;
+
+        const card = document.createElement('div');
+        card.className = `bay-card ${info.status}`;
+        card.onclick = () => openBayModal(bay.id);
+
+        if (!bay.occupied) {
+          card.innerHTML = `
+            <div class="bay-top">
+              <span class="bay-num">Bay #${pad(bay.id)}</span>
+              <span class="bay-badge">OPEN</span>
+            </div>
+            <div class="free-hint">+ Tap to Check In</div>
+          `;
+        } else {
+          card.innerHTML = `
+            <div>
+              <div class="bay-top">
+                <span class="bay-num">Bay #${pad(bay.id)}</span>
+                <span class="bay-badge">${info.label}</span>
+              </div>
+              <div class="bay-customer">${escapeHtml(bay.customer)}</div>
+              <div class="bay-device">${escapeHtml(bay.device || 'No device note')}</div>
+            </div>
+            <div class="bay-footer">
+              <span>R${bay.price} · ${bay.paymentMethod}</span>
+              <span>${info.remainingText}</span>
+            </div>
+          `;
+        }
+
+        grid.appendChild(card);
+      });
+
+      document.getElementById('statFree').textContent = freeCount;
+      document.getElementById('statBusy').textContent = busyCount;
+      document.getElementById('statOver').textContent = overCount;
+
+      updateRevenue();
+    }
+
+    function updateRevenue() {
+      let cash = 0;
+      let card = 0;
+
+      // Count active bays
+      state.bays.forEach(b => {
+        if (b.occupied) {
+          if (b.paymentMethod === 'Cash') cash += b.price;
+          else card += b.price;
+        }
+      });
+
+      // Count completed history
+      state.history.forEach(h => {
+        if (h.paymentMethod === 'Cash') cash += h.price;
+        else card += h.price;
+      });
+
+      document.getElementById('revTotal').textContent = `R${cash + card}`;
+      document.getElementById('revCash').textContent = `R${cash}`;
+      document.getElementById('revCard').textContent = `R${card}`;
+    }
+
+    function openBayModal(id) {
+      selectedBayId = id;
+      const bay = state.bays.find(b => b.id === id);
+      document.getElementById('modalTitle').textContent = `Bay #${pad(id)}`;
+      const body = document.getElementById('modalBody');
+
+      if (!bay.occupied) {
+        formTier = { label: 'R30 (1 Hr)', price: 30, mins: 60 };
+        formPay = 'Cash';
+        body.innerHTML = `
+          <div class="field">
+            <label>Customer Name / Friend's Name</label>
+            <input type="text" id="inpCustomer" placeholder="e.g. Thabo (White Bucket Hat)" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label>Phone & Case (For Lost PIN Proof)</label>
+            <input type="text" id="inpDevice" placeholder="e.g. iPhone 15 Pro - Clear Case" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label>Charging Tier</label>
+            <div class="seg-grid">
+              <button type="button" class="seg-btn selected" onclick="selectTier('R30 (1 Hr)', 30, 60, this)">R30 · 1 Hour</button>
+              <button type="button" class="seg-btn" onclick="selectTier('R50 (Full)', 50, 0, this)">R50 · Full Charge</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Payment Collected Upfront</label>
+            <div class="seg-grid">
+              <button type="button" class="seg-btn selected" onclick="selectPay('Cash', this)">Cash</button>
+              <button type="button" class="seg-btn" onclick="selectPay('Card / QR', this)">Card / QR</button>
+            </div>
+          </div>
+          <button type="button" class="btn-primary" onclick="confirmCheckIn()">Lock & Start Timer</button>
+        `;
+      } else {
+        const info = getBayStatus(bay);
+        body.innerHTML = `
+          <div class="detail-box">
+            <div class="detail-row"><span>Customer</span><strong>${escapeHtml(bay.customer)}</strong></div>
+            <div class="detail-row"><span>Device / Case</span><strong>${escapeHtml(bay.device || '—')}</strong></div>
+            <div class="detail-row"><span>Tier & Paid</span><strong>${bay.tierLabel} · ${bay.paymentMethod}</strong></div>
+            <div class="detail-row"><span>Checked In</span><strong>${formatTime(bay.checkInTime)} (${info.remainingText})</strong></div>
+          </div>
+          <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">
+            If customer forgot their PIN, verify lockscreen wallpaper before using your master key.
+          </p>
+          <button type="button" class="btn-release" onclick="releaseBay(${bay.id})">Customer Collected · Release Bay</button>
+        `;
+      }
+
+      document.getElementById('bayModal').classList.add('open');
+    }
+
+    function selectTier(label, price, mins, btn) {
+      formTier = { label, price, mins };
+      btn.parentElement.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    }
+
+    function selectPay(method, btn) {
+      formPay = method;
+      btn.parentElement.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    }
+
+    function confirmCheckIn() {
+      const customer = document.getElementById('inpCustomer').value.trim();
+      const device = document.getElementById('inpDevice').value.trim();
+      if (!customer) {
+        alert('Please enter the customer name or identifier.');
+        return;
+      }
+
+      const bay = state.bays.find(b => b.id === selectedBayId);
+      bay.occupied = true;
+      bay.customer = customer;
+      bay.device = device;
+      bay.tierLabel = formTier.label;
+      bay.price = formTier.price;
+      bay.durationMins = formTier.mins;
+      bay.paymentMethod = formPay;
+      bay.checkInTime = Date.now();
+
+      saveState();
+      closeBayModal();
+      render();
+    }
+
+    function releaseBay(id) {
+      const bay = state.bays.find(b => b.id === id);
+      if (!bay || !bay.occupied) return;
+
+      state.history.unshift({
+        bayId: bay.id,
+        customer: bay.customer,
+        device: bay.device,
+        tierLabel: bay.tierLabel,
+        price: bay.price,
+        paymentMethod: bay.paymentMethod,
+        checkInTime: bay.checkInTime,
+        releasedTime: Date.now()
+      });
+
+      bay.occupied = false;
+      bay.customer = '';
+      bay.device = '';
+      bay.tierLabel = '';
+      bay.price = 0;
+      bay.durationMins = 0;
+      bay.checkInTime = null;
+
+      saveState();
+      closeBayModal();
+      render();
+    }
+
+    function closeBayModal() {
+      document.getElementById('bayModal').classList.remove('open');
+    }
+
+    function openHistoryModal() {
+      const list = document.getElementById('logList');
+      document.getElementById('logCount').textContent = state.history.length;
+
+      if (state.history.length === 0) {
+        list.innerHTML = `<p style="color:var(--muted); font-size:0.85rem; text-align:center; padding:20px 0;">No completed collections yet.</p>`;
+      } else {
+        list.innerHTML = state.history.map(h => `
+          <div class="log-item">
+            <div>
+              <strong>Bay #${pad(h.bayId)} · ${escapeHtml(h.customer)}</strong>
+              <div style="color:var(--muted); font-size:0.74rem;">${escapeHtml(h.device || 'No note')} · ${formatTime(h.checkInTime)}–${formatTime(h.releasedTime)}</div>
+            </div>
+            <div style="text-align:right;">
+              <strong style="color:var(--free-text);">R${h.price}</strong>
+              <div style="color:var(--muted); font-size:0.72rem;">${h.paymentMethod}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('historyModal').classList.add('open');
+    }
+
+    function closeHistoryModal() {
+      document.getElementById('historyModal').classList.remove('open');
+    }
+
+    function exportCSV() {
+      const rows = [['Status', 'Bay', 'Customer', 'Device', 'Tier', 'Amount_ZAR', 'Payment', 'CheckIn', 'Released']];
+      state.bays.forEach(b => {
+        if (b.occupied) {
+          rows.push(['ACTIVE', b.id, b.customer, b.device, b.tierLabel, b.price, b.paymentMethod, formatTime(b.checkInTime), '']);
+        }
+      });
+      state.history.forEach(h => {
+        rows.push(['COMPLETED', h.bayId, h.customer, h.device, h.tierLabel, h.price, h.paymentMethod, formatTime(h.checkInTime), formatTime(h.releasedTime)]);
+      });
+
+      const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `chargevault_shift_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function resetShift() {
+      if (!confirm('Clear all active bays and shift revenue for a brand new event?')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      state.bays.forEach(b => {
+        b.occupied = false;
+        b.customer = '';
+        b.device = '';
+        b.tierLabel = '';
+        b.price = 0;
+        b.durationMins = 0;
+        b.checkInTime = null;
+      });
+      state.history = [];
+      render();
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    loadState();
+    render();
+    setInterval(render, 15000);
+  </script>
+</body>
+</html>
