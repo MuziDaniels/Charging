@@ -33,6 +33,7 @@
     --red-text: #f87171;
     --blue: #38bdf8;
     --blue-soft: rgba(56, 189, 248, 0.14);
+    --wa: #25d366;
 
     --radius: 16px;
     --safe-b: env(safe-area-inset-bottom, 0px);
@@ -40,14 +41,11 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
   html { background: var(--bg); }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Inter, sans-serif;
-    background:
-      radial-gradient(1200px 500px at 50% -200px, rgba(34, 197, 94, 0.10), transparent 70%),
-      var(--bg);
+    background: radial-gradient(1200px 500px at 50% -200px, rgba(34, 197, 94, 0.10), transparent 70%), var(--bg);
     color: var(--text);
     min-height: 100vh;
     min-height: 100dvh;
@@ -58,58 +56,46 @@
 
   button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; }
   button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
-
   .wrap { max-width: 960px; margin: 0 auto; }
 
   /* ---------- Header ---------- */
   header {
-    position: sticky;
-    top: 0;
-    z-index: 20;
+    position: sticky; top: 0; z-index: 20;
     background: rgba(10, 14, 23, 0.86);
     backdrop-filter: saturate(160%) blur(14px);
     -webkit-backdrop-filter: saturate(160%) blur(14px);
     border-bottom: 1px solid var(--border-soft);
     padding: calc(12px + var(--safe-t)) 16px 12px;
   }
-
-  .top-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
-
+  .top-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
   .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .logo {
-    width: 38px; height: 38px; flex: none;
-    border-radius: 11px;
+    width: 38px; height: 38px; flex: none; border-radius: 11px;
     background: linear-gradient(145deg, #34d399, #16a34a);
     display: grid; place-items: center;
     box-shadow: 0 6px 18px rgba(34, 197, 94, 0.35);
   }
   .logo svg { width: 20px; height: 20px; }
-  .brand-text h1 { font-size: 1.08rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
-  .brand-text p { font-size: 0.72rem; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; }
-  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(34,197,94,.6); animation: live 2s infinite; }
+  .brand-text { min-width: 0; }
+  .brand-text h1 { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand-text p { font-size: 0.72rem; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
+  .live-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--green); animation: live 2s infinite; }
   @keyframes live { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); } 70% { box-shadow: 0 0 0 7px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
 
   .icon-btn {
     width: 42px; height: 42px; flex: none;
     display: grid; place-items: center;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    color: var(--muted);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; color: var(--muted); position: relative;
   }
   .icon-btn:active { background: var(--surface-2); color: var(--text); }
   .icon-btn svg { width: 20px; height: 20px; }
-  .header-actions { display: flex; gap: 8px; }
+  .icon-btn .dot { position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); display: none; }
+  .icon-btn.warn .dot { display: block; }
+  .header-actions { display: flex; gap: 6px; flex: none; }
 
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .stat {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 10px 12px;
-    position: relative;
-    overflow: hidden;
-  }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; position: relative; overflow: hidden; }
   .stat::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--c); }
   .stat .val { font-size: 1.45rem; font-weight: 800; letter-spacing: -0.03em; color: var(--c); line-height: 1.1; font-variant-numeric: tabular-nums; }
   .stat .lbl { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-top: 2px; }
@@ -119,20 +105,9 @@
 
   /* ---------- Toolbar ---------- */
   .toolbar { padding: 14px 16px 2px; display: flex; flex-direction: column; gap: 10px; }
-
-  .search {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0 12px;
-  }
+  .search { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0 12px; }
   .search svg { width: 18px; height: 18px; color: var(--dim); flex: none; }
-  .search input {
-    flex: 1; min-width: 0;
-    background: none; border: none; color: var(--text);
-    font-size: 16px; padding: 12px 0;
-  }
+  .search input { flex: 1; min-width: 0; background: none; border: none; color: var(--text); font-size: 16px; padding: 12px 0; }
   .search input::placeholder { color: var(--dim); }
   .search input:focus { outline: none; }
   .search:focus-within { border-color: var(--blue); }
@@ -141,72 +116,44 @@
 
   .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
   .chips::-webkit-scrollbar { display: none; }
-  .chip {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    padding: 8px 14px;
-    border-radius: 999px;
-    font-size: 0.84rem;
-    font-weight: 600;
-    white-space: nowrap;
-    display: inline-flex; align-items: center; gap: 6px;
-  }
+  .chip { background: var(--surface); border: 1px solid var(--border); color: var(--muted); padding: 8px 14px; border-radius: 999px; font-size: 0.84rem; font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
   .chip .n { font-size: 0.72rem; background: var(--border); color: var(--text); border-radius: 999px; padding: 1px 7px; font-variant-numeric: tabular-nums; }
   .chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
   .chip.active .n { background: var(--bg); color: var(--text); }
 
   /* ---------- Grid ---------- */
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    padding: 12px 16px;
-  }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px 16px; }
   @media (min-width: 560px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (min-width: 820px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
   .bay {
-    position: relative;
-    text-align: left;
-    border-radius: var(--radius);
-    padding: 12px;
-    border: 1.5px solid var(--border);
-    background: var(--surface);
-    display: flex; flex-direction: column;
-    min-height: 138px;
-    transition: transform 0.1s ease, border-color 0.2s;
-    overflow: hidden;
+    position: relative; text-align: left;
+    border-radius: var(--radius); padding: 12px;
+    border: 1.5px solid var(--border); background: var(--surface);
+    display: flex; flex-direction: column; min-height: 146px;
+    transition: transform 0.1s ease, border-color 0.2s; overflow: hidden;
   }
   .bay:active { transform: scale(0.97); }
-
   .bay-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .bay-num { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1; }
   .bay-num small { font-size: 0.62rem; font-weight: 700; color: var(--muted); letter-spacing: 0.08em; display: block; margin-bottom: 3px; }
-  .badge {
-    font-size: 0.64rem; font-weight: 800; letter-spacing: 0.05em;
-    padding: 4px 8px; border-radius: 999px; text-transform: uppercase;
-    display: inline-flex; align-items: center; gap: 5px;
-  }
+  .badge { font-size: 0.64rem; font-weight: 800; letter-spacing: 0.05em; padding: 4px 8px; border-radius: 999px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 5px; }
   .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
-  /* Free */
   .bay.free { background: linear-gradient(160deg, rgba(34,197,94,0.10), rgba(34,197,94,0.03)); border-color: rgba(34,197,94,0.32); border-style: dashed; }
   .bay.free .badge { background: var(--green-soft); color: var(--green-text); }
   .free-cta { margin-top: auto; display: flex; align-items: center; gap: 8px; color: var(--green-text); font-weight: 700; font-size: 0.88rem; }
   .free-cta .plus { width: 28px; height: 28px; border-radius: 50%; background: var(--green); color: #052e16; display: grid; place-items: center; font-size: 1.2rem; font-weight: 800; line-height: 1; }
 
-  /* Charging */
   .bay.charging { background: linear-gradient(160deg, rgba(245,158,11,0.13), rgba(245,158,11,0.04)); border-color: rgba(245,158,11,0.55); }
   .bay.charging .badge { background: var(--amber-soft); color: var(--amber-text); }
-
-  /* Overdue */
   .bay.overdue { background: linear-gradient(160deg, rgba(239,68,68,0.20), rgba(239,68,68,0.06)); border-color: var(--red); animation: pulse 1.8s infinite; }
   .bay.overdue .badge { background: var(--red-soft); color: var(--red-text); }
   @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.4); } 50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); } }
 
   .bay-customer { font-size: 0.98rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bay-device { font-size: 0.76rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .bay-device { font-size: 0.76rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+  .mini-batt { flex: none; font-size: 0.68rem; font-weight: 700; color: var(--text); background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 6px; font-variant-numeric: tabular-nums; }
 
   .bay-bottom { margin-top: auto; padding-top: 10px; }
   .meter { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
@@ -238,24 +185,20 @@
   .rev-sub .val { font-size: 0.95rem; font-weight: 700; font-variant-numeric: tabular-nums; }
   .bottom-inner .icon-btn { margin-left: auto; }
 
-  /* ---------- Sheets / modals ---------- */
+  /* ---------- Sheets ---------- */
   .backdrop {
     position: fixed; inset: 0; z-index: 50;
     background: rgba(2, 6, 14, 0.72);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
     display: flex; align-items: flex-end; justify-content: center;
     opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
   }
   .backdrop.open { opacity: 1; pointer-events: auto; }
   .sheet {
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    border-bottom: none;
+    background: var(--bg-2); border: 1px solid var(--border); border-bottom: none;
     border-radius: 24px 24px 0 0;
     width: 100%; max-width: 480px;
-    max-height: 92vh; max-height: 92dvh;
-    overflow-y: auto;
+    max-height: 92vh; max-height: 92dvh; overflow-y: auto;
     padding: 8px 18px calc(22px + var(--safe-b));
     transform: translateY(100%);
     transition: transform 0.28s cubic-bezier(.2,.9,.3,1);
@@ -267,6 +210,7 @@
     .sheet { border-radius: 22px; border-bottom: 1px solid var(--border); transform: translateY(20px) scale(0.98); }
     .backdrop.open .sheet { transform: none; }
   }
+  #confirmModal { z-index: 60; }
   .grabber { width: 40px; height: 5px; border-radius: 999px; background: var(--border); margin: 4px auto 12px; }
   @media (min-width: 640px) { .grabber { visibility: hidden; height: 0; margin: 6px auto; } }
 
@@ -276,73 +220,74 @@
   .close-btn { width: 36px; height: 36px; flex: none; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-size: 1.25rem; display: grid; place-items: center; }
 
   .field { margin-bottom: 16px; }
-  .field label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 7px; }
-  .field input {
-    width: 100%;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    padding: 14px;
-    color: var(--text);
-    font-size: 16px;
+  .field > label, .lbl-row { display: block; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 7px; }
+  .lbl-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .lbl-row em { font-style: normal; text-transform: none; letter-spacing: 0; color: var(--dim); font-weight: 600; }
+  .field input[type=text], .field input[type=tel], .field input[type=number] {
+    width: 100%; background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 14px; color: var(--text); font-size: 16px;
   }
   .field input::placeholder { color: var(--dim); }
   .field input:focus { outline: none; border-color: var(--blue); background: var(--surface-2); }
-  .field.error input { border-color: var(--red); }
+  .field.error input, .field.error .batt { border-color: var(--red); }
   .field .err { display: none; color: var(--red-text); font-size: 0.78rem; margin-top: 6px; font-weight: 600; }
   .field.error .err { display: block; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .two .field { min-width: 0; }
+
+  .input-btn { display: flex; gap: 8px; }
+  .input-btn input { flex: 1; min-width: 0; }
+  .input-btn button { flex: none; padding: 0 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; color: var(--blue); }
+  .pin-input { font-variant-numeric: tabular-nums; letter-spacing: 0.15em; font-weight: 700; }
+
+  /* Battery picker */
+  .batt { background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 12px 14px 10px; }
+  .batt-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .batt-icon { width: 46px; height: 22px; border: 2px solid var(--muted); border-radius: 5px; position: relative; padding: 2px; flex: none; }
+  .batt-icon::after { content: ""; position: absolute; right: -6px; top: 5px; width: 3px; height: 8px; border-radius: 0 2px 2px 0; background: var(--muted); }
+  .batt-icon .fill { display: block; height: 100%; border-radius: 2px; background: var(--dim); width: 0; transition: width 0.15s, background 0.15s; }
+  .batt-val { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .batt-val.unset { color: var(--dim); }
+  .batt-hint { margin-left: auto; font-size: 0.74rem; color: var(--dim); font-weight: 600; }
+  .batt input[type=range] { width: 100%; height: 32px; accent-color: var(--blue); }
+  .batt-chips { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; margin-top: 4px; }
+  .batt-chips button { padding: 8px 0; min-width: 0; border-radius: 9px; background: var(--bg-2); border: 1px solid var(--border); font-size: 0.8rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .batt-chips button:active { background: var(--surface-2); color: var(--text); }
 
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .opt {
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 14px;
-    padding: 12px;
-    text-align: left;
-    min-height: 56px;
-    transition: border-color 0.15s, background 0.15s;
-  }
+  .opt { background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 12px; text-align: left; min-height: 56px; transition: border-color 0.15s, background 0.15s; }
   .opt .big { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; display: block; }
   .opt .small { font-size: 0.76rem; color: var(--muted); font-weight: 600; }
   .opt.center { text-align: center; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; }
   .opt.selected { border-color: var(--blue); background: var(--blue-soft); }
   .opt.selected .big, .opt.selected.center { color: var(--blue); }
 
-  .btn {
-    width: 100%;
-    border-radius: 14px;
-    padding: 16px;
-    font-size: 1.02rem;
-    font-weight: 800;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    transition: transform 0.1s, filter 0.15s;
-  }
+  .btn { width: 100%; border-radius: 14px; padding: 16px; font-size: 1.02rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.1s, filter 0.15s; text-decoration: none; }
   .btn:active { transform: scale(0.98); filter: brightness(0.92); }
   .btn-go { background: var(--green); color: #052e16; box-shadow: 0 8px 24px rgba(34,197,94,0.25); }
   .btn-red { background: var(--red); color: #fff; }
   .btn-soft { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-weight: 700; }
-  .btn + .btn { margin-top: 10px; }
-  .btn svg { width: 18px; height: 18px; }
+  .btn-wa { background: rgba(37, 211, 102, 0.12); border: 1px solid rgba(37, 211, 102, 0.4); color: var(--wa); font-weight: 700; }
+  .btn + .btn, .btn-row + .btn, .btn + .btn-row { margin-top: 10px; }
+  .btn svg { width: 18px; height: 18px; flex: none; }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn-row .btn { margin: 0; font-size: 0.92rem; padding: 14px 10px; }
+  .link-btn { display: block; margin: 12px auto 0; color: var(--muted); font-size: 0.86rem; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; padding: 6px; }
 
-  .code-card {
-    text-align: center;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 16px;
-    margin-bottom: 14px;
-  }
+  .code-card { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
   .code-card .lbl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
   .code-card .code { font-size: 2.6rem; font-weight: 800; letter-spacing: 0.2em; margin: 4px 0 2px; padding-left: 0.2em; font-variant-numeric: tabular-nums; color: var(--blue); }
   .code-card .hint { font-size: 0.78rem; color: var(--muted); }
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .duo .code-card { margin: 0; padding: 12px 10px; }
+  .duo .code { font-size: 1.9rem; letter-spacing: 0.12em; padding-left: 0.12em; }
+  .duo .code.pin { color: var(--amber-text); }
+  .reveal { margin-top: 2px; font-size: 0.76rem; font-weight: 700; color: var(--blue); padding: 4px 8px; }
 
   .success-ic { width: 64px; height: 64px; border-radius: 50%; background: var(--green-soft); color: var(--green-text); display: grid; place-items: center; margin: 4px auto 12px; }
   .success-ic svg { width: 32px; height: 32px; }
 
-  .status-banner {
-    display: flex; justify-content: space-between; align-items: center;
-    border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; font-weight: 700;
-  }
+  .status-banner { display: flex; justify-content: space-between; align-items: center; border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; font-weight: 700; }
   .status-banner.charging { background: var(--amber-soft); color: var(--amber-text); border: 1px solid rgba(245,158,11,0.35); }
   .status-banner.overdue { background: var(--red-soft); color: var(--red-text); border: 1px solid rgba(239,68,68,0.45); }
   .status-banner .t { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
@@ -355,19 +300,36 @@
 
   .note { display: flex; gap: 10px; font-size: 0.8rem; color: var(--muted); line-height: 1.45; background: var(--blue-soft); border: 1px solid rgba(56,189,248,0.25); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; }
   .note svg { width: 18px; height: 18px; flex: none; color: var(--blue); margin-top: 1px; }
+  .note.warn { background: var(--amber-soft); border-color: rgba(245,158,11,0.3); }
+  .note.warn svg { color: var(--amber-text); }
 
-  /* History */
-  .sum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
-  .sum { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
-  .sum .v { font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .sum .l { font-size: 0.64rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .gain { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .gain .from { color: var(--muted); }
+  .gain .to { color: var(--green-text); }
+  .gain .delta { font-size: 0.8rem; background: var(--green-soft); color: var(--green-text); padding: 3px 8px; border-radius: 999px; }
+
+  /* Log + insights */
+  .sum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+  .sum { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px; min-width: 0; }
+  .sum .v { font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .sum .l { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+  .bars { display: flex; align-items: flex-end; gap: 4px; height: 84px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 10px 22px; margin: 8px 0 16px; position: relative; }
+  .bars .b { flex: 1; min-width: 0; background: var(--blue); opacity: 0.85; border-radius: 4px 4px 2px 2px; position: relative; min-height: 2px; }
+  .bars .b.top { background: var(--green); opacity: 1; }
+  .bars .b span { position: absolute; bottom: -17px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; color: var(--dim); font-weight: 600; }
+  .bars .none { margin: auto; color: var(--dim); font-size: 0.8rem; align-self: center; }
   .log { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
   .log-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 11px 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 0.86rem; }
   .log-item .sub { color: var(--muted); font-size: 0.74rem; margin-top: 2px; }
   .log-item .amt { text-align: right; flex: none; }
   .log-item .amt strong { color: var(--green-text); }
   .muted-center { color: var(--muted); font-size: 0.88rem; text-align: center; padding: 24px 0; }
-  .section-lbl { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 4px 0 8px; }
+  .section-lbl { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 4px 0 8px; display: flex; justify-content: space-between; }
+
+  .toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; font-size: 0.9rem; font-weight: 600; }
+  .toggle small { display: block; color: var(--muted); font-weight: 500; font-size: 0.76rem; margin-top: 2px; }
+  .toggle input { width: 22px; height: 22px; accent-color: var(--blue); flex: none; }
+  .hr { height: 1px; background: var(--border); margin: 18px 0; }
 
   /* Toast */
   .toast {
@@ -386,9 +348,7 @@
   .toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
   .toast button { color: #0369a1; font-weight: 800; padding: 4px 6px; }
 
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation: none !important; transition: none !important; }
-  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
@@ -397,20 +357,22 @@
   <div class="wrap">
     <div class="top-row">
       <div class="brand">
-        <div class="logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="#052e16"><path d="M13.5 1.5 4 13.5h6.5l-1.5 9 9.5-12H12z"/></svg>
-        </div>
+        <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="#052e16"><path d="M13.5 1.5 4 13.5h6.5l-1.5 9 9.5-12H12z"/></svg></div>
         <div class="brand-text">
-          <h1>ChargeVault 20</h1>
-          <p><span class="live-dot"></span><span id="clock">--:--</span> · Saved on this phone</p>
+          <h1 id="brandTitle">ChargeVault 20</h1>
+          <p><span class="live-dot"></span><span id="clock">--:--</span><span id="brandSub">· Saved on this phone</span></p>
         </div>
       </div>
       <div class="header-actions">
-        <button class="icon-btn" onclick="openHistory()" aria-label="Shift log">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
+        <button class="icon-btn" onclick="openHistory()" aria-label="Shift log and insights">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
         </button>
-        <button class="icon-btn" onclick="exportCSV()" aria-label="Export CSV">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        <button class="icon-btn" onclick="exportPDF()" aria-label="Download PDF report">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 12v6M9 15l3 3 3-3"/></svg>
+        </button>
+        <button class="icon-btn" id="settingsBtn" onclick="openSettings()" aria-label="Settings and backup">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+          <span class="dot"></span>
         </button>
       </div>
     </div>
@@ -436,7 +398,6 @@
       <button class="chip" data-filter="overdue" onclick="setFilter('overdue')">Overdue <span class="n" id="cOver">0</span></button>
     </div>
   </div>
-
   <main class="grid" id="bayGrid"></main>
 </div>
 
@@ -477,6 +438,18 @@
   </div>
 </div>
 
+<!-- Settings sheet -->
+<div class="backdrop" id="settingsModal" onclick="if (event.target === this) closeSheet('settingsModal')">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <div class="grabber"></div>
+    <div class="sheet-head">
+      <div><h2 id="setTitle">Settings & backup</h2><p>Everything is stored on this phone only</p></div>
+      <button class="close-btn" onclick="closeSheet('settingsModal')" aria-label="Close">&times;</button>
+    </div>
+    <div id="settingsBody"></div>
+  </div>
+</div>
+
 <!-- Confirm sheet -->
 <div class="backdrop" id="confirmModal" onclick="if (event.target === this) answerConfirm(false)">
   <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
@@ -487,58 +460,79 @@
   </div>
 </div>
 
+<input type="file" id="restoreInput" accept="application/json,.json" hidden onchange="restoreBackup(this)" />
 <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastAction" hidden></button></div>
 
 <script>
+/*
+  ChargeVault 20
+  No server or database: all data is kept in this browser's localStorage on this one device.
+  Use Settings > Download backup to move data to another phone or keep a safe copy.
+*/
 const STORAGE_KEY = 'chargevault_20_state_v1';
 const BAY_COUNT = 20;
-const TIERS = {
-  hour: { label: 'R30 (1 Hr)', price: 30, mins: 60 },
-  full: { label: 'R50 (Full)', price: 50, mins: 0 }
-};
-const EXTEND = { price: 30, mins: 60 };
+const DEFAULT_SETTINGS = { eventName: '', priceHour: 30, priceFull: 50, priceExt: 30, lastBackup: null };
 
 function blankBay(id) {
-  return { id, occupied: false, customer: '', device: '', tierLabel: '', price: 0, durationMins: 0, paymentMethod: 'Cash', checkInTime: null, code: '' };
+  return {
+    id, occupied: false, customer: '', device: '', phone: '', lockerPin: '',
+    batteryIn: null, tierKey: '', tierBase: '', tierLabel: '', price: 0, durationMins: 0,
+    extensions: 0, paymentMethod: 'Cash', checkInTime: null, code: '', overdueNotified: false
+  };
+}
+function freshState() {
+  return { settings: { ...DEFAULT_SETTINGS }, bays: Array.from({ length: BAY_COUNT }, (_, i) => blankBay(i + 1)), history: [] };
 }
 
-let state = { bays: Array.from({ length: BAY_COUNT }, (_, i) => blankBay(i + 1)), history: [] };
-
+let state = freshState();
 let currentFilter = 'all';
 let searchTerm = '';
 let selectedBayId = null;
-let formTier = TIERS.hour;
+let formTier = 'hour';
 let formPay = 'Cash';
 let lastRelease = null;
 let toastTimer = null;
+let pinVisible = false;
 
-/* ---------- Storage ---------- */
+/* ---------- Storage (localStorage only, no database) ---------- */
+function normalise(s) {
+  const out = freshState();
+  out.settings = { ...DEFAULT_SETTINGS, ...(s.settings || {}) };
+  out.bays = out.bays.map((b, i) => ({ ...b, ...((s.bays || [])[i] || {}) }));
+  out.history = Array.isArray(s.history) ? s.history : [];
+  return out;
+}
 function loadState() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed && Array.isArray(parsed.bays) && parsed.bays.length === BAY_COUNT) {
-        parsed.history = Array.isArray(parsed.history) ? parsed.history : [];
-        state = parsed;
-      }
+      if (parsed && Array.isArray(parsed.bays) && parsed.bays.length === BAY_COUNT) state = normalise(parsed);
     }
   } catch (e) { console.error('Failed to load saved state', e); }
 }
-
 function saveState() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-  catch (e) { console.error('Failed to save state', e); showToast('Could not save. Storage may be full.'); }
+  catch (e) { console.error('Failed to save state', e); showToast('Could not save. Download a backup now.'); }
 }
 
 /* ---------- Helpers ---------- */
 const pad = n => String(n).padStart(2, '0');
 function formatTime(ts) { if (!ts) return '--:--'; const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function formatDate(ts) { return new Date(ts).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' }); }
 function fmtMins(m) { m = Math.max(0, Math.round(m)); if (m < 60) return `${m}m`; const h = Math.floor(m / 60), r = m % 60; return r ? `${h}h ${r}m` : `${h}h`; }
-function escapeHtml(str) {
-  return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
+function escapeHtml(str) { return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function vibrate(p) { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
+const isNum = v => typeof v === 'number' && !isNaN(v);
+function battText(v) { return isNum(v) ? `${v}%` : '-'; }
+
+function tiers() {
+  const s = state.settings;
+  return {
+    hour: { key: 'hour', label: `R${s.priceHour} (1 Hr)`, price: +s.priceHour, mins: 60, name: '1 hour' },
+    full: { key: 'full', label: `R${s.priceFull} (Full)`, price: +s.priceFull, mins: 0, name: 'Full charge' }
+  };
+}
 
 function newCode() {
   const used = new Set(state.bays.filter(b => b.occupied).map(b => b.code));
@@ -546,13 +540,19 @@ function newCode() {
   do { c = String(Math.floor(100 + Math.random() * 900)); } while (used.has(c));
   return c;
 }
+function randomPin() { return String(Math.floor(Math.random() * 10000)).padStart(4, '0'); }
+
+function waNumber(raw) {
+  let d = String(raw || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.length === 10 && d.startsWith('0')) d = '27' + d.slice(1);
+  return d;
+}
 
 function getBayStatus(bay) {
   if (!bay.occupied) return { status: 'free', label: 'Open', text: '', pct: 0 };
   const elapsed = (Date.now() - bay.checkInTime) / 60000;
-  if (!bay.durationMins) {
-    return { status: 'charging', label: 'Full chg', text: `${fmtMins(elapsed)} in`, pct: -1, elapsed };
-  }
+  if (!bay.durationMins) return { status: 'charging', label: 'Full chg', text: `${fmtMins(elapsed)} in`, pct: -1, elapsed };
   const left = bay.durationMins - elapsed;
   const pct = Math.min(100, (elapsed / bay.durationMins) * 100);
   if (left <= 0) return { status: 'overdue', label: 'Overdue', text: `+${fmtMins(-left)} over`, pct: 100, elapsed };
@@ -562,10 +562,12 @@ function getBayStatus(bay) {
 function matchesSearch(bay) {
   if (!searchTerm) return true;
   const q = searchTerm.toLowerCase();
+  const digits = q.replace(/\D/g, '');
   return String(bay.id) === q.replace(/^0+/, '') ||
     (bay.customer || '').toLowerCase().includes(q) ||
     (bay.device || '').toLowerCase().includes(q) ||
-    (bay.code && bay.code === q);
+    (bay.code && bay.code === q) ||
+    (digits.length >= 4 && (bay.phone || '').replace(/\D/g, '').includes(digits));
 }
 
 /* ---------- Render ---------- */
@@ -574,23 +576,21 @@ function setFilter(filter) {
   document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.filter === filter));
   render();
 }
-
-function onSearch(v) {
-  searchTerm = v.trim();
-  document.getElementById('searchBox').classList.toggle('has-text', !!v);
-  render();
-}
+function onSearch(v) { searchTerm = v.trim(); document.getElementById('searchBox').classList.toggle('has-text', !!v); render(); }
 function clearSearch() { const i = document.getElementById('searchInput'); i.value = ''; onSearch(''); i.blur(); }
 
 function render() {
   const grid = document.getElementById('bayGrid');
   let free = 0, busy = 0, over = 0;
   const cards = [];
+  const newlyOverdue = [];
 
   state.bays.forEach(bay => {
     const info = getBayStatus(bay);
     if (info.status === 'free') free++;
     else { busy++; if (info.status === 'overdue') over++; }
+
+    if (info.status === 'overdue' && !bay.overdueNotified) { bay.overdueNotified = true; newlyOverdue.push(bay); }
 
     if (currentFilter === 'free' && info.status !== 'free') return;
     if (currentFilter === 'busy' && info.status === 'free') return;
@@ -600,26 +600,17 @@ function render() {
     if (!bay.occupied) {
       cards.push(`
         <button class="bay free" onclick="openBay(${bay.id})" aria-label="Bay ${bay.id}, open. Tap to check in">
-          <div class="bay-top">
-            <div class="bay-num"><small>BAY</small>${pad(bay.id)}</div>
-            <span class="badge">Open</span>
-          </div>
+          <div class="bay-top"><div class="bay-num"><small>BAY</small>${pad(bay.id)}</div><span class="badge">Open</span></div>
           <div class="free-cta"><span class="plus">+</span>Check in</div>
         </button>`);
     } else {
-      const meter = info.pct < 0
-        ? `<div class="meter full"><span></span></div>`
-        : `<div class="meter"><span style="width:${info.pct.toFixed(1)}%"></span></div>`;
+      const meter = info.pct < 0 ? `<div class="meter full"><span></span></div>` : `<div class="meter"><span style="width:${info.pct.toFixed(1)}%"></span></div>`;
       cards.push(`
         <button class="bay ${info.status}" onclick="openBay(${bay.id})" aria-label="Bay ${bay.id}, ${escapeHtml(bay.customer)}, ${info.text}">
-          <div class="bay-top">
-            <div class="bay-num"><small>BAY</small>${pad(bay.id)}</div>
-            <span class="badge">${info.label}</span>
-          </div>
+          <div class="bay-top"><div class="bay-num"><small>BAY</small>${pad(bay.id)}</div><span class="badge">${info.label}</span></div>
           <div class="bay-customer">${escapeHtml(bay.customer)}</div>
-          <div class="bay-device">${escapeHtml(bay.device || 'No device note')}</div>
-          <div class="bay-bottom">
-            ${meter}
+          <div class="bay-device">${isNum(bay.batteryIn) ? `<span class="mini-batt">${bay.batteryIn}%</span>` : ''}<span style="overflow:hidden;text-overflow:ellipsis">${escapeHtml(bay.device || 'No device note')}</span></div>
+          <div class="bay-bottom">${meter}
             <div class="bay-meta"><span class="time">${info.text}</span><span class="paid">R${bay.price} · ${bay.paymentMethod === 'Cash' ? 'Cash' : 'Card'}</span></div>
           </div>
         </button>`);
@@ -627,18 +618,22 @@ function render() {
   });
 
   grid.innerHTML = cards.length ? cards.join('') :
-    `<div class="empty"><strong>${searchTerm ? 'No match' : 'Nothing here'}</strong>${searchTerm ? 'Try the customer name, phone, pickup code or bay number.' : 'No bays in this view right now.'}</div>`;
+    `<div class="empty"><strong>${searchTerm ? 'No match' : 'Nothing here'}</strong>${searchTerm ? 'Try the customer name, cellphone, pickup code or bay number.' : 'No bays in this view right now.'}</div>`;
 
-  document.getElementById('statFree').textContent = free;
-  document.getElementById('statBusy').textContent = busy;
-  document.getElementById('statOver').textContent = over;
-  document.getElementById('cAll').textContent = BAY_COUNT;
-  document.getElementById('cFree').textContent = free;
-  document.getElementById('cBusy').textContent = busy;
-  document.getElementById('cOver').textContent = over;
-  document.getElementById('clock').textContent = formatTime(Date.now());
-
+  const set = (id, v) => { document.getElementById(id).textContent = v; };
+  set('statFree', free); set('statBusy', busy); set('statOver', over);
+  set('cAll', BAY_COUNT); set('cFree', free); set('cBusy', busy); set('cOver', over);
+  set('clock', formatTime(Date.now()));
+  set('brandTitle', state.settings.eventName || 'ChargeVault 20');
+  set('brandSub', state.settings.eventName ? '· ChargeVault 20' : '· Saved on this phone');
   updateRevenue();
+  updateBackupDot();
+
+  if (newlyOverdue.length) {
+    saveState();
+    vibrate([120, 80, 120]);
+    showToast(newlyOverdue.length === 1 ? `Bay ${pad(newlyOverdue[0].id)} time is up` : `${newlyOverdue.length} bays are now overdue`, 'View', () => setFilter('overdue'), 5000);
+  }
 }
 
 function totals() {
@@ -647,12 +642,17 @@ function totals() {
   state.history.forEach(h => { if (h.paymentMethod === 'Cash') cash += h.price; else card += h.price; });
   return { cash, card, total: cash + card };
 }
-
 function updateRevenue() {
   const t = totals();
   document.getElementById('revTotal').textContent = `R${t.total}`;
   document.getElementById('revCash').textContent = `R${t.cash}`;
   document.getElementById('revCard').textContent = `R${t.card}`;
+}
+function updateBackupDot() {
+  const last = state.settings.lastBackup;
+  const activity = state.history.length + state.bays.filter(b => b.occupied).length;
+  const stale = activity > 0 && (!last || Date.now() - last > 2 * 3600000);
+  document.getElementById('settingsBtn').classList.toggle('warn', stale);
 }
 
 /* ---------- Sheets ---------- */
@@ -663,122 +663,210 @@ function closeSheet(id) {
 }
 function closeBayModal() { closeSheet('bayModal'); }
 
+/* ---------- Battery picker ---------- */
+function batteryPicker(id, chips, startVal) {
+  return `
+    <div class="batt" id="${id}" data-set="0">
+      <div class="batt-head">
+        <span class="batt-icon"><span class="fill"></span></span>
+        <span class="batt-val unset">--%</span>
+        <span class="batt-hint">Slide or tap</span>
+      </div>
+      <input type="range" min="0" max="100" step="1" value="${startVal}" aria-label="Battery percentage" oninput="setBattery('${id}', this.value)" />
+      <div class="batt-chips">${chips.map(c => `<button type="button" onclick="setBattery('${id}', ${c})">${c}%</button>`).join('')}</div>
+    </div>`;
+}
+function setBattery(id, v) {
+  v = Math.max(0, Math.min(100, Math.round(+v)));
+  const el = document.getElementById(id);
+  el.dataset.set = '1';
+  el.querySelector('input').value = v;
+  const val = el.querySelector('.batt-val');
+  val.textContent = `${v}%`; val.classList.remove('unset');
+  const fill = el.querySelector('.fill');
+  fill.style.width = `${v}%`;
+  fill.style.background = v <= 20 ? 'var(--red)' : v <= 50 ? 'var(--amber)' : 'var(--green)';
+  el.closest('.field')?.classList.remove('error');
+  const g = document.getElementById('gainPreview');
+  if (g) g.innerHTML = gainHtml(g.dataset.from === '' ? null : +g.dataset.from, v);
+}
+function getBattery(id) { const el = document.getElementById(id); return el && el.dataset.set === '1' ? +el.querySelector('input').value : null; }
+
+function gainHtml(from, to) {
+  if (!isNum(from)) return `<span class="to">${to}%</span>`;
+  const d = to - from;
+  return `<span class="from">${from}%</span><span>→</span><span class="to">${to}%</span><span class="delta">${d >= 0 ? '+' : ''}${d}%</span>`;
+}
+
+/* ---------- Bay flows ---------- */
 function openBay(id) {
   selectedBayId = id;
+  pinVisible = false;
   const bay = state.bays.find(b => b.id === id);
   document.getElementById('modalTitle').textContent = `Bay ${pad(id)}`;
-  const body = document.getElementById('modalBody');
-  const sub = document.getElementById('modalSub');
-
-  if (!bay.occupied) {
-    formTier = TIERS.hour;
-    formPay = 'Cash';
-    sub.textContent = 'New check-in';
-    body.innerHTML = `
-      <div class="field" id="fCustomer">
-        <label for="inpCustomer">Customer name</label>
-        <input type="text" id="inpCustomer" placeholder="e.g. Thabo (white bucket hat)" autocomplete="off" autocapitalize="words" enterkeyhint="next" />
-        <div class="err">Add a name or something to recognise them by.</div>
-      </div>
-      <div class="field">
-        <label for="inpDevice">Phone & case</label>
-        <input type="text" id="inpDevice" placeholder="e.g. iPhone 15 Pro, clear case" autocomplete="off" enterkeyhint="done" />
-      </div>
-      <div class="field">
-        <label>Charging option</label>
-        <div class="seg">
-          <button type="button" class="opt selected" onclick="selectTier('hour', this)"><span class="big">R30</span><span class="small">1 hour</span></button>
-          <button type="button" class="opt" onclick="selectTier('full', this)"><span class="big">R50</span><span class="small">Full charge</span></button>
-        </div>
-      </div>
-      <div class="field">
-        <label>Paid upfront with</label>
-        <div class="seg">
-          <button type="button" class="opt center selected" onclick="selectPay('Cash', this)">💵 Cash</button>
-          <button type="button" class="opt center" onclick="selectPay('Card / QR', this)">💳 Card / QR</button>
-        </div>
-      </div>
-      <button type="button" class="btn btn-go" onclick="confirmCheckIn()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-        Lock bay & start timer
-      </button>`;
-    const inp = document.getElementById('inpCustomer');
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('inpDevice').focus(); } });
-    document.getElementById('inpDevice').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
-  } else {
-    renderActiveBay(bay);
-  }
+  if (!bay.occupied) renderCheckIn(bay); else renderActiveBay(bay);
   openSheet('bayModal');
+}
+
+function renderCheckIn(bay) {
+  const t = tiers();
+  formTier = 'hour';
+  formPay = 'Cash';
+  document.getElementById('modalSub').textContent = 'New check-in';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field" id="fCustomer">
+      <label for="inpCustomer">Customer name</label>
+      <input type="text" id="inpCustomer" placeholder="e.g. Thabo (white bucket hat)" autocomplete="off" autocapitalize="words" enterkeyhint="next" />
+      <div class="err">Add a name or something to recognise them by.</div>
+    </div>
+    <div class="field">
+      <label for="inpDevice">Phone & case</label>
+      <input type="text" id="inpDevice" placeholder="e.g. iPhone 15 Pro, clear case" autocomplete="off" enterkeyhint="next" />
+    </div>
+    <div class="field">
+      <div class="lbl-row"><span>Customer cellphone</span><em>optional, for WhatsApp</em></div>
+      <input type="tel" id="inpPhone" inputmode="tel" placeholder="e.g. 072 123 4567" autocomplete="off" />
+    </div>
+    <div class="field" id="fPin">
+      <label for="inpPin">Locker PIN / password</label>
+      <div class="input-btn">
+        <input type="text" id="inpPin" class="pin-input" placeholder="PIN set on the locker" autocomplete="off" autocapitalize="off" spellcheck="false" />
+        <button type="button" onclick="document.getElementById('inpPin').value = randomPin(); document.getElementById('fPin').classList.remove('error')">Generate</button>
+      </div>
+      <div class="err">Add the PIN you set on the physical locker.</div>
+    </div>
+    <div class="field" id="fBattIn">
+      <label>Battery at drop-off</label>
+      ${batteryPicker('battIn', [5, 10, 15, 20, 30, 40, 50], 20)}
+      <div class="err">Set the battery % for the analysis report.</div>
+    </div>
+    <div class="field">
+      <label>Charging option</label>
+      <div class="seg">
+        <button type="button" class="opt selected" onclick="selectTier('hour', this)"><span class="big">R${t.hour.price}</span><span class="small">1 hour</span></button>
+        <button type="button" class="opt" onclick="selectTier('full', this)"><span class="big">R${t.full.price}</span><span class="small">Full charge</span></button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Paid upfront with</label>
+      <div class="seg">
+        <button type="button" class="opt center selected" onclick="selectPay('Cash', this)">💵 Cash</button>
+        <button type="button" class="opt center" onclick="selectPay('Card / QR', this)">💳 Card / QR</button>
+      </div>
+    </div>
+    <button type="button" class="btn btn-go" onclick="confirmCheckIn()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      Lock bay & start timer
+    </button>`;
+  ['inpCustomer', 'inpPin'].forEach(fid => document.getElementById(fid).addEventListener('input', e => e.target.closest('.field').classList.remove('error')));
+  const order = ['inpCustomer', 'inpDevice', 'inpPhone', 'inpPin'];
+  order.forEach((fid, i) => document.getElementById(fid).addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const next = order[i + 1];
+    next ? document.getElementById(next).focus() : e.target.blur();
+  }));
 }
 
 function renderActiveBay(bay) {
   const info = getBayStatus(bay);
   document.getElementById('modalSub').textContent = `Checked in at ${formatTime(bay.checkInTime)}`;
   const canExtend = bay.durationMins > 0;
+  const wa = waNumber(bay.phone);
+  const pinShown = pinVisible ? escapeHtml(bay.lockerPin) : '•'.repeat(Math.min(Math.max((bay.lockerPin || '').length, 4), 8));
+  const codeBlock = bay.code ? `
+      <div class="code-card"><div class="lbl">Pickup code</div><div class="code">${bay.code}</div><div class="hint">Customer says this</div></div>` : '';
+  const pinBlock = bay.lockerPin ? `
+      <div class="code-card"><div class="lbl">Locker PIN</div><div class="code pin">${pinShown}</div>
+        <button class="reveal" onclick="pinVisible = !pinVisible; renderActiveBay(state.bays.find(b => b.id === ${bay.id}))">${pinVisible ? 'Hide' : 'Show'}</button></div>` : '';
+
   document.getElementById('modalBody').innerHTML = `
     <div class="status-banner ${info.status}">
       <span>${info.status === 'overdue' ? 'Time is up' : (bay.durationMins ? 'Charging' : 'Full charge')}</span>
       <span class="t">${info.text}</span>
     </div>
-    ${bay.code ? `
-    <div class="code-card">
-      <div class="lbl">Pickup code</div>
-      <div class="code">${bay.code}</div>
-      <div class="hint">Ask the customer for this before handing over</div>
-    </div>` : ''}
+    ${codeBlock || pinBlock ? `<div class="${codeBlock && pinBlock ? 'duo' : ''}">${codeBlock}${pinBlock}</div>` : ''}
     <div class="details">
       <div class="row"><span>Customer</span><strong>${escapeHtml(bay.customer)}</strong></div>
       <div class="row"><span>Phone / case</span><strong>${escapeHtml(bay.device || 'Not noted')}</strong></div>
+      ${bay.phone ? `<div class="row"><span>Cellphone</span><strong>${escapeHtml(bay.phone)}</strong></div>` : ''}
+      <div class="row"><span>Battery in</span><strong>${battText(bay.batteryIn)}</strong></div>
       <div class="row"><span>Option</span><strong>${escapeHtml(bay.tierLabel)}</strong></div>
       <div class="row"><span>Paid</span><strong>R${bay.price} · ${escapeHtml(bay.paymentMethod)}</strong></div>
     </div>
+    ${!bay.lockerPin ? `<div class="note warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span>No locker PIN saved for this bay.</span></div>` : ''}
     <div class="note">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-      <span>Forgot their PIN? Match the lock screen wallpaper to the phone before using the master key.</span>
+      <span>Forgot their pickup code? Match the lock screen wallpaper to the phone before you open the locker.</span>
     </div>
-    ${canExtend ? `<button type="button" class="btn btn-soft" onclick="extendBay(${bay.id})">+1 hour · collect R${EXTEND.price}</button>` : ''}
-    <button type="button" class="btn btn-red" onclick="releaseBay(${bay.id})">
+    ${wa || canExtend ? `<div class="${wa && canExtend ? 'btn-row' : ''}">
+      ${wa ? `<a class="btn btn-wa" href="${waLink(bay)}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.3-.5.1-1 .1-3.3-.8-2.8-1.1-4.5-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l2 .9c.3.1.5.2.5.3.1.2.1.6-.1 1.3z"/></svg>
+        Notify</a>` : ''}
+      ${canExtend ? `<button type="button" class="btn btn-soft" onclick="extendBay(${bay.id})">+1 hr · R${state.settings.priceExt}</button>` : ''}
+    </div>` : ''}
+    <button type="button" class="btn btn-red" onclick="renderRelease(${bay.id})">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-      Collected · release bay
+      Customer is collecting
     </button>`;
 }
 
-function selectTier(key, btn) {
-  formTier = TIERS[key];
-  btn.parentElement.querySelectorAll('.opt').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
+function waLink(bay) {
+  const where = state.settings.eventName ? ` at ${state.settings.eventName}` : '';
+  const msg = `Hi ${bay.customer.split(/[ (]/)[0] || 'there'}, your phone at the ChargeVault charging station${where} (Bay ${pad(bay.id)}) is ready for collection. Please bring your pickup code ${bay.code || ''}.`.replace(' .', '.');
+  return `https://wa.me/${waNumber(bay.phone)}?text=${encodeURIComponent(msg)}`;
 }
 
-function selectPay(method, btn) {
-  formPay = method;
-  btn.parentElement.querySelectorAll('.opt').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
+function renderRelease(id) {
+  const bay = state.bays.find(b => b.id === id);
+  if (!bay || !bay.occupied) return;
+  const info = getBayStatus(bay);
+  document.getElementById('modalSub').textContent = `Collecting · ${fmtMins(info.elapsed || 0)} on charge`;
+  document.getElementById('modalBody').innerHTML = `
+    ${bay.code ? `<div class="code-card"><div class="lbl">Ask ${escapeHtml(bay.customer.split(/[ (]/)[0])} for their pickup code</div><div class="code">${bay.code}</div><div class="hint">Only hand over if it matches</div></div>` : ''}
+    <div class="field" id="fBattOut">
+      <label>Battery at collection</label>
+      ${batteryPicker('battOut', [50, 60, 70, 80, 90, 95, 100], isNum(bay.batteryIn) ? Math.min(100, bay.batteryIn + 30) : 80)}
+      <div class="err">Set the battery % or tap "Skip battery" below.</div>
+    </div>
+    <div class="gain" id="gainPreview" data-from="${isNum(bay.batteryIn) ? bay.batteryIn : ''}">${isNum(bay.batteryIn) ? `<span class="from">Dropped off at ${bay.batteryIn}%</span>` : ''}</div>
+    <button type="button" class="btn btn-go" onclick="releaseBay(${bay.id}, false)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      Handed over · free bay
+    </button>
+    <button type="button" class="btn btn-soft" onclick="pinVisible = false; renderActiveBay(state.bays.find(b => b.id === ${bay.id}))">Back</button>
+    <button type="button" class="link-btn" onclick="releaseBay(${bay.id}, true)">Skip battery (customer in a rush)</button>`;
 }
+
+function selectTier(key, btn) { formTier = key; btn.parentElement.querySelectorAll('.opt').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); }
+function selectPay(method, btn) { formPay = method; btn.parentElement.querySelectorAll('.opt').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); }
 
 function confirmCheckIn() {
   const customer = document.getElementById('inpCustomer').value.trim();
   const device = document.getElementById('inpDevice').value.trim();
-  if (!customer) {
-    const f = document.getElementById('fCustomer');
-    f.classList.add('error');
-    document.getElementById('inpCustomer').focus();
+  const phone = document.getElementById('inpPhone').value.trim();
+  const lockerPin = document.getElementById('inpPin').value.trim();
+  const batteryIn = getBattery('battIn');
+
+  let firstBad = null;
+  const flag = (fid, bad) => { document.getElementById(fid).classList.toggle('error', bad); if (bad && !firstBad) firstBad = fid; };
+  flag('fCustomer', !customer);
+  flag('fPin', !lockerPin);
+  flag('fBattIn', batteryIn === null);
+  if (firstBad) {
     vibrate(80);
+    document.getElementById(firstBad).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (firstBad === 'fCustomer') document.getElementById('inpCustomer').focus();
     return;
   }
 
+  const t = tiers()[formTier];
   const bay = state.bays.find(b => b.id === selectedBayId);
-  Object.assign(bay, {
-    occupied: true,
-    customer,
-    device,
-    tierLabel: formTier.label,
-    price: formTier.price,
-    durationMins: formTier.mins,
-    paymentMethod: formPay,
-    checkInTime: Date.now(),
-    code: newCode()
+  Object.assign(bay, blankBay(bay.id), {
+    occupied: true, customer, device, phone, lockerPin, batteryIn,
+    tierKey: t.key, tierBase: t.label, tierLabel: t.label, price: t.price, durationMins: t.mins,
+    paymentMethod: formPay, checkInTime: Date.now(), code: newCode()
   });
-
   saveState();
   render();
   vibrate(30);
@@ -797,28 +885,38 @@ function confirmCheckIn() {
 function extendBay(id) {
   const bay = state.bays.find(b => b.id === id);
   if (!bay || !bay.occupied || !bay.durationMins) return;
-  bay.durationMins += EXTEND.mins;
-  bay.price += EXTEND.price;
-  bay.tierLabel = `${bay.tierLabel.replace(/ \+\d+h ext$/, '')} +${Math.round((bay.durationMins - 60) / 60)}h ext`;
+  const p = +state.settings.priceExt;
+  bay.extensions = (bay.extensions || 0) + 1;
+  bay.durationMins += 60;
+  bay.price += p;
+  bay.overdueNotified = false;
+  const base = bay.tierBase || bay.tierLabel.replace(/ \+\d+h ext$/, '');
+  bay.tierBase = base;
+  bay.tierLabel = `${base} +${bay.extensions}h ext`;
   saveState();
   render();
   renderActiveBay(bay);
-  showToast(`Bay ${pad(id)} extended. Collect R${EXTEND.price}.`);
+  showToast(`Bay ${pad(id)} extended. Collect R${p}.`);
 }
 
-function releaseBay(id) {
+function releaseBay(id, skipBattery) {
   const bay = state.bays.find(b => b.id === id);
   if (!bay || !bay.occupied) return;
-
+  const batteryOut = skipBattery ? null : getBattery('battOut');
+  if (!skipBattery && batteryOut === null) {
+    document.getElementById('fBattOut').classList.add('error');
+    vibrate(80);
+    return;
+  }
   const entry = {
-    bayId: bay.id, customer: bay.customer, device: bay.device, tierLabel: bay.tierLabel,
-    price: bay.price, paymentMethod: bay.paymentMethod, checkInTime: bay.checkInTime,
-    releasedTime: Date.now(), code: bay.code || ''
+    bayId: bay.id, customer: bay.customer, device: bay.device, phone: bay.phone || '', lockerPin: bay.lockerPin || '',
+    tierKey: bay.tierKey || (bay.durationMins ? 'hour' : 'full'), tierLabel: bay.tierLabel, extensions: bay.extensions || 0,
+    price: bay.price, paymentMethod: bay.paymentMethod, checkInTime: bay.checkInTime, releasedTime: Date.now(),
+    code: bay.code || '', batteryIn: isNum(bay.batteryIn) ? bay.batteryIn : null, batteryOut
   };
   lastRelease = { bay: { ...bay }, entry };
   state.history.unshift(entry);
   Object.assign(bay, blankBay(bay.id));
-
   saveState();
   closeBayModal();
   render();
@@ -840,70 +938,432 @@ function undoRelease() {
   showToast(`Bay ${pad(saved.id)} restored`);
 }
 
-/* ---------- History ---------- */
+/* ---------- Analysis ---------- */
+function sessionStats(h) {
+  const mins = h.releasedTime && h.checkInTime ? (h.releasedTime - h.checkInTime) / 60000 : null;
+  const gained = isNum(h.batteryIn) && isNum(h.batteryOut) ? h.batteryOut - h.batteryIn : null;
+  const rate = gained !== null && mins > 1 ? gained / (mins / 60) : null;
+  return { mins, gained, rate };
+}
+
+function insights() {
+  const h = state.history;
+  const withGain = h.map(sessionStats).filter(s => s.gained !== null);
+  const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+  const allMins = h.map(x => sessionStats(x).mins).filter(isNum);
+  const ins = [...state.bays.filter(b => b.occupied), ...h].map(x => x.batteryIn).filter(isNum);
+
+  const hours = {};
+  [...h, ...state.bays.filter(b => b.occupied)].forEach(x => { const hr = new Date(x.checkInTime).getHours(); hours[hr] = (hours[hr] || 0) + 1; });
+  const hrKeys = Object.keys(hours).map(Number).sort((a, b) => a - b);
+  let busiest = null;
+  hrKeys.forEach(k => { if (busiest === null || hours[k] > hours[busiest]) busiest = k; });
+
+  const byTier = {};
+  h.forEach(x => {
+    const k = (x.tierLabel || '').replace(/ \+\d+h ext$/, '') || 'Unknown';
+    byTier[k] = byTier[k] || { sessions: 0, revenue: 0 };
+    byTier[k].sessions++; byTier[k].revenue += x.price;
+  });
+
+  return {
+    served: h.length,
+    active: state.bays.filter(b => b.occupied).length,
+    avgGain: avg(withGain.map(s => s.gained)),
+    avgRate: avg(withGain.map(s => s.rate).filter(isNum)),
+    avgMins: avg(allMins),
+    avgIn: avg(ins),
+    avgOut: avg(h.map(x => x.batteryOut).filter(isNum)),
+    extensions: h.reduce((a, x) => a + (x.extensions || 0), 0),
+    hours, hrKeys, busiest, byTier
+  };
+}
+
+/* ---------- History / insights sheet ---------- */
 function openHistory() {
   const t = totals();
-  const active = state.bays.filter(b => b.occupied).length;
-  document.getElementById('histSub').textContent = `${state.history.length} collected · ${active} still charging`;
-  const items = state.history.map(h => `
+  const ins = insights();
+  const r = v => v === null ? '-' : Math.round(v);
+  document.getElementById('histSub').textContent = `${ins.served} collected · ${ins.active} still charging`;
+
+  let bars = '<span class="none">Check-ins per hour show up here</span>';
+  if (ins.hrKeys.length) {
+    const first = ins.hrKeys[0], last = ins.hrKeys[ins.hrKeys.length - 1];
+    const max = Math.max(...Object.values(ins.hours));
+    bars = '';
+    for (let hr = first; hr <= last; hr++) {
+      const n = ins.hours[hr] || 0;
+      bars += `<div class="b ${hr === ins.busiest ? 'top' : ''}" style="height:${(n / max) * 100}%" title="${n} check-ins"><span>${pad(hr)}</span></div>`;
+    }
+  }
+
+  const items = state.history.map(h => {
+    const s = sessionStats(h);
+    const batt = isNum(h.batteryIn) || isNum(h.batteryOut) ? ` · ${battText(h.batteryIn)} → ${battText(h.batteryOut)}` : '';
+    return `
     <div class="log-item">
       <div style="min-width:0">
         <strong>Bay ${pad(h.bayId)} · ${escapeHtml(h.customer)}</strong>
-        <div class="sub">${escapeHtml(h.device || 'No note')} · ${formatTime(h.checkInTime)} to ${formatTime(h.releasedTime)}</div>
+        <div class="sub">${formatTime(h.checkInTime)} to ${formatTime(h.releasedTime)} (${fmtMins(s.mins || 0)})${batt}</div>
       </div>
       <div class="amt"><strong>R${h.price}</strong><div class="sub">${escapeHtml(h.paymentMethod)}</div></div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   document.getElementById('historyBody').innerHTML = `
     <div class="sum-grid">
       <div class="sum"><div class="v" style="color:var(--green-text)">R${t.total}</div><div class="l">Total</div></div>
       <div class="sum"><div class="v">R${t.cash}</div><div class="l">Cash</div></div>
       <div class="sum"><div class="v">R${t.card}</div><div class="l">Card / QR</div></div>
+      <div class="sum"><div class="v">${ins.avgGain === null ? '-' : '+' + r(ins.avgGain) + '%'}</div><div class="l">Avg gained</div></div>
+      <div class="sum"><div class="v">${ins.avgMins === null ? '-' : fmtMins(ins.avgMins)}</div><div class="l">Avg time</div></div>
+      <div class="sum"><div class="v">${ins.avgRate === null ? '-' : r(ins.avgRate) + '%/h'}</div><div class="l">Charge speed</div></div>
     </div>
-    <div class="section-lbl">Collected</div>
+    <div class="section-lbl" style="margin-top:14px"><span>Check-ins by hour</span><span>${ins.busiest !== null ? 'Busiest ' + pad(ins.busiest) + ':00' : ''}</span></div>
+    <div class="bars">${bars}</div>
+    <div class="section-lbl"><span>Collected</span><span>${ins.served}</span></div>
     <div class="log">${items || '<p class="muted-center">No collections yet.</p>'}</div>
-    <button class="btn btn-soft" onclick="exportCSV()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-      Export CSV
+    <label class="toggle"><span>Include locker PINs in PDF<small>Leave off if you share the report</small></span><input type="checkbox" id="pdfPins" /></label>
+    <button class="btn btn-go" onclick="exportPDF(document.getElementById('pdfPins').checked)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 12v6M9 15l3 3 3-3"/></svg>
+      Download PDF report
     </button>
     <button class="btn btn-soft" style="color:var(--red-text)" onclick="resetShift()">End shift & reset</button>`;
   openSheet('historyModal');
 }
 
-function exportCSV() {
-  const rows = [['Status', 'Bay', 'Customer', 'Device', 'Tier', 'Amount_ZAR', 'Payment', 'PickupCode', 'CheckIn', 'Released']];
-  state.bays.forEach(b => {
-    if (b.occupied) rows.push(['ACTIVE', b.id, b.customer, b.device, b.tierLabel, b.price, b.paymentMethod, b.code || '', formatTime(b.checkInTime), '']);
-  });
-  state.history.forEach(h => {
-    rows.push(['COMPLETED', h.bayId, h.customer, h.device, h.tierLabel, h.price, h.paymentMethod, h.code || '', formatTime(h.checkInTime), formatTime(h.releasedTime)]);
-  });
-  if (rows.length === 1) { showToast('Nothing to export yet'); return; }
+/* ---------- Settings, backup & restore ---------- */
+function openSettings() {
+  const s = state.settings;
+  const last = s.lastBackup ? `${formatDate(s.lastBackup)} at ${formatTime(s.lastBackup)}` : 'Never';
+  document.getElementById('settingsBody').innerHTML = `
+    <div class="field">
+      <label for="setEvent">Event name</label>
+      <input type="text" id="setEvent" value="${escapeHtml(s.eventName)}" placeholder="e.g. Cotton Fest 2026" autocomplete="off" />
+    </div>
+    <div class="section-lbl"><span>Prices (new check-ins only)</span></div>
+    <div class="two" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="field"><label for="setHour">1 hour</label><input type="number" inputmode="numeric" id="setHour" value="${s.priceHour}" min="0" /></div>
+      <div class="field"><label for="setFull">Full</label><input type="number" inputmode="numeric" id="setFull" value="${s.priceFull}" min="0" /></div>
+      <div class="field"><label for="setExt">+1 hr</label><input type="number" inputmode="numeric" id="setExt" value="${s.priceExt}" min="0" /></div>
+    </div>
+    <button class="btn btn-go" onclick="saveSettings()">Save settings</button>
+    <div class="hr"></div>
+    <div class="note warn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+      <span>There is no online database. Data lives only in this browser on this phone. Clearing browser data or using private mode loses it, so download a backup every few hours. Last backup: <strong>${last}</strong></span>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-soft" onclick="downloadBackup()">Download backup</button>
+      <button class="btn btn-soft" onclick="document.getElementById('restoreInput').click()">Restore backup</button>
+    </div>
+    <p style="font-size:0.76rem;color:var(--muted);margin-top:10px;line-height:1.45">Switching phones? Download a backup here, send the file to the new phone, then use Restore backup on it.</p>`;
+  openSheet('settingsModal');
+}
 
-  const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+function saveSettings() {
+  const num = (id, fallback) => { const v = parseInt(document.getElementById(id).value, 10); return isNaN(v) || v < 0 ? fallback : v; };
+  const s = state.settings;
+  s.eventName = document.getElementById('setEvent').value.trim();
+  s.priceHour = num('setHour', s.priceHour);
+  s.priceFull = num('setFull', s.priceFull);
+  s.priceExt = num('setExt', s.priceExt);
+  saveState();
+  render();
+  closeSheet('settingsModal');
+  showToast('Settings saved');
+}
+
+function stamp() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`; }
+function slug(s) { return (s || '').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '').slice(0, 40); }
+
+function downloadFile(blob, name) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = `chargevault_shift_${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showToast('CSV downloaded');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function downloadBackup() {
+  state.settings.lastBackup = Date.now();
+  saveState();
+  const data = { app: 'ChargeVault 20', exportedAt: new Date().toISOString(), state };
+  downloadFile(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `ChargeVault_backup_${slug(state.settings.eventName) || 'event'}_${stamp()}.json`);
+  render();
+  openSettings();
+  showToast('Backup downloaded');
+}
+
+async function restoreBackup(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    const s = parsed.state || parsed;
+    if (!s || !Array.isArray(s.bays) || s.bays.length !== BAY_COUNT) throw new Error('bad file');
+    const n = (s.history || []).length, a = s.bays.filter(b => b.occupied).length;
+    const ok = await askConfirm('Restore this backup?', `It has ${a} active bays and ${n} collections. It replaces everything currently on this phone.`, 'Replace with backup');
+    if (!ok) return;
+    state = normalise(s);
+    saveState();
+    render();
+    closeSheet('settingsModal');
+    showToast('Backup restored');
+  } catch (e) {
+    showToast('That file is not a ChargeVault backup');
+  }
 }
 
 async function resetShift() {
   const t = totals();
-  const ok = await askConfirm('End shift and reset?', `This clears all 20 bays and the R${t.total} shift log. Export the CSV first if you need it.`, 'Reset everything');
+  const ok = await askConfirm('End shift and reset?', `This clears all 20 bays and the R${t.total} shift log. Download the PDF report and a backup first.`, 'Reset everything');
   if (!ok) return;
+  const keep = { ...state.settings };
   try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-  state = { bays: Array.from({ length: BAY_COUNT }, (_, i) => blankBay(i + 1)), history: [] };
+  state = freshState();
+  state.settings = { ...keep, lastBackup: null };
   lastRelease = null;
   saveState();
   closeSheet('historyModal');
   render();
   showToast('New shift started');
+}
+
+/* ---------- PDF report ---------- */
+const PDF_LIBS = [
+  ['jspdf.umd.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => window.jspdf],
+  ['jspdf.plugin.autotable.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js', () => window.jspdf && window.jspdf.jsPDF.API.autoTable]
+];
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.async = true;
+    s.onload = () => res(); s.onerror = () => { s.remove(); rej(new Error(src)); };
+    document.head.appendChild(s);
+  });
+}
+let pdfLibPromise = null;
+function ensurePdfLibs() {
+  if (!pdfLibPromise) {
+    pdfLibPromise = (async () => {
+      for (const [local, cdn, ready] of PDF_LIBS) {
+        if (ready()) continue;
+        try { await loadScript(local); } catch (e) { await loadScript(cdn); }
+        if (!ready()) throw new Error('PDF library not ready');
+      }
+    })().catch(e => { pdfLibPromise = null; throw e; });
+  }
+  return pdfLibPromise;
+}
+
+// jsPDF's built-in font only covers basic Latin, so strip emoji and other symbols
+const clean = s => String(s ?? '').replace(/[‐-―]/g, '-').replace(/[^\x20-\x7E\xA0-\xFF]/g, '').replace(/\s+/g, ' ').trim();
+
+async function exportPDF(includePins = false) {
+  if (!state.history.length && !state.bays.some(b => b.occupied)) { showToast('Nothing to report yet'); return; }
+  showToast('Building PDF...');
+  try { await ensurePdfLibs(); }
+  catch (e) { showToast('PDF tool could not load. Connect to the internet once and try again.', null, null, 5000); return; }
+
+  try {
+    buildPdf(includePins);
+  } catch (e) {
+    console.error(e);
+    showToast('Something went wrong building the PDF');
+  }
+}
+
+function buildPdf(includePins) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const M = 12;
+  const now = Date.now();
+  const t = totals();
+  const ins = insights();
+  const event = clean(state.settings.eventName) || 'ChargeVault 20';
+  const firstIn = Math.min(...[...state.history, ...state.bays.filter(b => b.occupied)].map(x => x.checkInTime));
+
+  const C = { ink: [15, 23, 42], muted: [100, 116, 139], line: [226, 232, 240], zebra: [248, 250, 252], green: [22, 163, 74], amber: [217, 119, 6], head: [15, 23, 42] };
+  const r0 = v => v === null || v === undefined || isNaN(v) ? '-' : String(Math.round(v));
+
+  // Title band
+  doc.setFillColor(...C.head);
+  doc.rect(0, 0, W, 26, 'F');
+  doc.setFillColor(34, 197, 94);
+  doc.rect(0, 26, W, 1.2, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(17);
+  doc.text(`${event}: shift report`, M, 12);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+  doc.setTextColor(203, 213, 225);
+  doc.text(`ChargeVault 20 phone charging  |  ${formatDate(firstIn)}, ${formatTime(firstIn)} to ${formatTime(now)}`, M, 19);
+  doc.text(`Generated ${formatDate(now)} at ${formatTime(now)}`, W - M, 19, { align: 'right' });
+
+  // KPI tiles
+  const kpis = [
+    ['Total revenue', `R${t.total}`],
+    ['Cash', `R${t.cash}`],
+    ['Card / QR', `R${t.card}`],
+    ['Phones collected', `${ins.served}${ins.active ? ` (+${ins.active} active)` : ''}`],
+    ['Avg battery gained', ins.avgGain === null ? '-' : `+${r0(ins.avgGain)}%`],
+    ['Avg time on charge', ins.avgMins === null ? '-' : fmtMins(ins.avgMins)],
+    ['Avg charge speed', ins.avgRate === null ? '-' : `${r0(ins.avgRate)}% per hr`]
+  ];
+  const gap = 3, tileW = (W - 2 * M - gap * (kpis.length - 1)) / kpis.length, tileY = 33, tileH = 18;
+  kpis.forEach(([label, value], i) => {
+    const x = M + i * (tileW + gap);
+    doc.setDrawColor(...C.line); doc.setFillColor(...C.zebra);
+    doc.roundedRect(x, tileY, tileW, tileH, 2, 2, 'FD');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...C.muted);
+    doc.text(label.toUpperCase(), x + 3, tileY + 6);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12.5); doc.setTextColor(...(i === 0 ? C.green : C.ink));
+    doc.text(value, x + 3, tileY + 14);
+  });
+
+  const sectionTitle = (text, y) => {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(...C.ink);
+    doc.text(text, M, y);
+  };
+
+  const baseTable = {
+    theme: 'grid',
+    margin: { left: M, right: M, top: 16, bottom: 14 },
+    styles: { font: 'helvetica', fontSize: 8.3, cellPadding: { top: 2.2, bottom: 2.2, left: 2.4, right: 2.4 }, textColor: C.ink, lineColor: C.line, lineWidth: 0.2, valign: 'middle', overflow: 'linebreak' },
+    headStyles: { fillColor: C.head, textColor: 255, fontStyle: 'bold', fontSize: 8, halign: 'left', valign: 'middle' },
+    footStyles: { fillColor: [241, 245, 249], textColor: C.ink, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: C.zebra }
+  };
+
+  // Completed sessions
+  let y = tileY + tileH + 11;
+  sectionTitle(`Completed sessions (${state.history.length})`, y);
+
+  const cols = [
+    { h: '#', w: 8, a: 'right' },
+    { h: 'Bay', w: 11, a: 'center' },
+    { h: 'Customer', w: 'auto' },
+    { h: 'Phone / case', w: 'auto' },
+    { h: 'Option', w: 26 },
+    { h: 'Paid', w: 14, a: 'right' },
+    { h: 'Method', w: 20 },
+    { h: 'In', w: 12, a: 'center' },
+    { h: 'Out', w: 12, a: 'center' },
+    { h: 'Time', w: 15, a: 'right' },
+    { h: 'Batt in', w: 14, a: 'right' },
+    { h: 'Batt out', w: 17, a: 'right' },
+    { h: 'Gained', w: 15, a: 'right' },
+    { h: '% / hr', w: 14, a: 'right' }
+  ];
+  if (includePins) cols.push({ h: 'Locker PIN', w: 19, a: 'center' });
+
+  const sorted = [...state.history].sort((a, b) => a.checkInTime - b.checkInTime);
+  const body = sorted.map((h, i) => {
+    const s = sessionStats(h);
+    const row = [
+      i + 1, pad(h.bayId), clean(h.customer) || '-', clean(h.device) || '-', clean(h.tierLabel),
+      `R${h.price}`, clean(h.paymentMethod), formatTime(h.checkInTime), formatTime(h.releasedTime),
+      s.mins === null ? '-' : fmtMins(s.mins), battText(h.batteryIn), battText(h.batteryOut),
+      s.gained === null ? '-' : `${s.gained >= 0 ? '+' : ''}${s.gained}%`, s.rate === null ? '-' : r0(s.rate)
+    ];
+    if (includePins) row.push(clean(h.lockerPin) || '-');
+    return row;
+  });
+  const foot = [['', '', `${sorted.length} session${sorted.length === 1 ? '' : 's'}`, '', '', `R${sorted.reduce((a, h) => a + h.price, 0)}`, '', '', '',
+    ins.avgMins === null ? '-' : fmtMins(ins.avgMins), ins.avgIn === null ? '-' : `${r0(ins.avgIn)}%`,
+    ins.avgOut === null ? '-' : `${r0(ins.avgOut)}%`, ins.avgGain === null ? '-' : `+${r0(ins.avgGain)}%`, r0(ins.avgRate)]];
+  if (includePins) foot[0].push('');
+
+  const columnStyles = {};
+  cols.forEach((c, i) => { columnStyles[i] = { cellWidth: c.w, halign: c.a || 'left' }; });
+  const headRow = [cols.map((c, i) => ({ content: c.h, styles: { halign: c.a || 'left' } }))];
+
+  doc.autoTable({
+    ...baseTable,
+    startY: y + 3,
+    head: headRow,
+    body: body.length ? body : [[{ content: 'No completed sessions yet', colSpan: cols.length, styles: { halign: 'center', textColor: C.muted } }]],
+    foot: body.length ? [foot[0].map((v, i) => ({ content: v, styles: { halign: cols[i].a || 'left' } }))] : undefined,
+    showFoot: 'lastPage',
+    showHead: 'everyPage',
+    columnStyles,
+    didParseCell: d => {
+      if (d.section === 'body' && d.column.index === 12 && typeof d.cell.raw === 'string' && d.cell.raw.startsWith('+')) d.cell.styles.textColor = C.green;
+    }
+  });
+  y = doc.lastAutoTable.finalY;
+
+  // Still charging
+  const active = state.bays.filter(b => b.occupied).sort((a, b) => a.id - b.id);
+  if (active.length) {
+    if (y + 30 > H - 14) { doc.addPage(); y = 16; } else y += 10;
+    sectionTitle(`Still in lockers at time of report (${active.length})`, y);
+    const aCols = [
+      { h: 'Bay', w: 11, a: 'center' }, { h: 'Customer', w: 'auto' }, { h: 'Phone / case', w: 'auto' }, { h: 'Cellphone', w: 28 },
+      { h: 'Option', w: 30 }, { h: 'Paid', w: 14, a: 'right' }, { h: 'Method', w: 20 }, { h: 'In', w: 12, a: 'center' },
+      { h: 'On charge', w: 20, a: 'right' }, { h: 'Batt in', w: 14, a: 'right' }, { h: 'Status', w: 22 }
+    ];
+    if (includePins) aCols.push({ h: 'Locker PIN', w: 19, a: 'center' });
+    const aStyles = {};
+    aCols.forEach((c, i) => { aStyles[i] = { cellWidth: c.w, halign: c.a || 'left' }; });
+    doc.autoTable({
+      ...baseTable,
+      startY: y + 3,
+      head: [aCols.map(c => ({ content: c.h, styles: { halign: c.a || 'left' } }))],
+      body: active.map(b => {
+        const info = getBayStatus(b);
+        const row = [pad(b.id), clean(b.customer), clean(b.device) || '-', clean(b.phone) || '-', clean(b.tierLabel), `R${b.price}`, clean(b.paymentMethod),
+          formatTime(b.checkInTime), fmtMins(info.elapsed || 0), battText(b.batteryIn), info.status === 'overdue' ? 'Overdue' : 'Charging'];
+        if (includePins) row.push(clean(b.lockerPin) || '-');
+        return row;
+      }),
+      columnStyles: aStyles,
+      didParseCell: d => { if (d.section === 'body' && d.column.index === 10 && d.cell.raw === 'Overdue') { d.cell.styles.textColor = [220, 38, 38]; d.cell.styles.fontStyle = 'bold'; } }
+    });
+    y = doc.lastAutoTable.finalY;
+  }
+
+  // Breakdown tables side by side
+  const tierRows = Object.entries(ins.byTier).map(([k, v]) => [clean(k), v.sessions, `R${v.revenue}`]);
+  const hourRows = ins.hrKeys.map(hr => [`${pad(hr)}:00 to ${pad((hr + 1) % 24)}:00`, ins.hours[hr]]);
+  if (tierRows.length || hourRows.length) {
+    const needed = 18 + 7.5 * Math.max(tierRows.length, hourRows.length, 1);
+    if (y + needed > H - 14) { doc.addPage(); y = 16; } else y += 10;
+    const half = (W - 2 * M - 10) / 2;
+    sectionTitle('Revenue by option', y);
+    doc.text('Check-ins by hour', M + half + 10, y);
+    const startY = y + 3;
+    doc.autoTable({
+      ...baseTable, startY, tableWidth: half, margin: { ...baseTable.margin, right: W - M - half },
+      head: [['Option', { content: 'Sessions', styles: { halign: 'right' } }, { content: 'Revenue', styles: { halign: 'right' } }]],
+      body: tierRows.length ? tierRows : [[{ content: 'No completed sessions', colSpan: 3, styles: { halign: 'center', textColor: C.muted } }]],
+      columnStyles: { 1: { halign: 'right', cellWidth: 25 }, 2: { halign: 'right', cellWidth: 30 } }
+    });
+    doc.autoTable({
+      ...baseTable, startY, tableWidth: half, margin: { ...baseTable.margin, left: M + half + 10 },
+      head: [['Hour', { content: 'Check-ins', styles: { halign: 'right' } }]],
+      body: hourRows,
+      columnStyles: { 1: { halign: 'right', cellWidth: 30 } },
+      didParseCell: d => { if (d.section === 'body' && ins.hrKeys[d.row.index] === ins.busiest) d.cell.styles.fontStyle = 'bold'; }
+    });
+  }
+
+  // Footer on every page
+  const pages = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setDrawColor(...C.line); doc.setLineWidth(0.2);
+    doc.line(M, H - 9, W - M, H - 9);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...C.muted);
+    doc.text(`${state.settings.eventName ? event + '  |  ' : ''}ChargeVault 20 shift report${includePins ? '  |  CONTAINS LOCKER PINS' : ''}`, M, H - 5);
+    doc.text(`Page ${p} of ${pages}`, W - M, H - 5, { align: 'right' });
+  }
+
+  doc.save(`ChargeVault_${slug(state.settings.eventName) || 'shift'}_report_${stamp()}.pdf`);
+  showToast('PDF report downloaded');
 }
 
 /* ---------- Confirm + toast ---------- */
@@ -921,31 +1381,36 @@ function showToast(msg, actionLabel, action, ms = 2600) {
   const t = document.getElementById('toast');
   const btn = document.getElementById('toastAction');
   document.getElementById('toastMsg').textContent = msg;
-  if (actionLabel) {
-    btn.hidden = false; btn.textContent = actionLabel;
-    btn.onclick = () => { t.classList.remove('show'); action(); };
-  } else { btn.hidden = true; btn.onclick = null; }
+  if (actionLabel) { btn.hidden = false; btn.textContent = actionLabel; btn.onclick = () => { t.classList.remove('show'); action(); }; }
+  else { btn.hidden = true; btn.onclick = null; }
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), ms);
 }
 
-/* ---------- Keep screen awake during the event ---------- */
+/* ---------- Keep screen awake, offline cache ---------- */
 let wakeLock = null;
 async function keepAwake() {
   try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch (e) {}
 }
 document.addEventListener('click', keepAwake, { once: true });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { render(); keepAwake(); } });
-
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if (document.getElementById('confirmModal').classList.contains('open')) answerConfirm(false);
-  else ['bayModal', 'historyModal'].forEach(closeSheet);
+  else ['bayModal', 'historyModal', 'settingsModal'].forEach(closeSheet);
 });
+// If the app is open in two tabs, keep them in sync instead of overwriting each other
+window.addEventListener('storage', e => { if (e.key === STORAGE_KEY) { loadState(); render(); } });
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
 
 loadState();
 render();
+// Load the PDF tool in the background while there is signal, so export works later even offline
+setTimeout(() => ensurePdfLibs().catch(() => {}), 1500);
 setInterval(() => {
   render();
   const m = document.getElementById('bayModal');
