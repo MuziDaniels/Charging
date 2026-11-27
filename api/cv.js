@@ -249,7 +249,9 @@ module.exports = async function handler(req, res) {
           priceFull: Number(d.settings.priceFull) || 0,
           priceExt: Number(d.settings.priceExt) || 0,
           checkIntervalMins: Number(d.settings.checkIntervalMins) || 10,
-          bayCount: Number(d.settings.bayCount) === 10 ? 10 : 20
+          bayCount: Number(d.settings.bayCount) === 10 ? 10 : 20,
+          hourMins: Math.max(5, Number(d.settings.hourMins) || 60),
+          extMins: Math.max(5, Number(d.settings.extMins) || 60)
         } : {},
         bays: d.bays.slice(0, MAX_BAY_COUNT),
         history: d.history.slice(0, 5000),
