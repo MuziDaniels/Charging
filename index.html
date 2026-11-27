@@ -526,7 +526,7 @@
 const STORAGE_KEY = 'chargevault_20_state_v1';
 const BAY_COUNTS = [10, 20]; // the two physical machines you run
 const MAX_BAY_COUNT = Math.max(...BAY_COUNTS);
-const DEFAULT_SETTINGS = { eventName: '', priceHour: 30, priceFull: 50, priceExt: 30, lastBackup: null, checkIntervalMins: 10, bayCount: 20 };
+const DEFAULT_SETTINGS = { eventName: '', priceHour: 30, priceFull: 50, priceExt: 30, lastBackup: null, checkIntervalMins: 10, bayCount: 20, hourMins: 60, extMins: 60 };
 function uid() { try { return crypto.randomUUID(); } catch (e) { return `id-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`; } }
 function validBayCount(n) { return BAY_COUNTS.includes(+n) ? +n : 20; }
 
@@ -619,8 +619,9 @@ function battText(v) { return isNum(v) ? `${v}%` : '-'; }
 
 function tiers() {
   const s = state.settings;
+  const hourMins = +s.hourMins || 60;
   return {
-    hour: { key: 'hour', label: `R${s.priceHour} (1 Hr)`, price: +s.priceHour, mins: 60, name: '1 hour' },
+    hour: { key: 'hour', label: `R${s.priceHour} (${fmtMins(hourMins)})`, price: +s.priceHour, mins: hourMins, name: fmtMins(hourMins) },
     full: { key: 'full', label: `R${s.priceFull} (Full)`, price: +s.priceFull, mins: 0, name: 'Full charge' }
   };
 }
@@ -865,7 +866,7 @@ function renderCheckIn(bay) {
     <div class="field">
       <label>Charging option</label>
       <div class="seg">
-        <button type="button" class="opt selected" onclick="selectTier('hour', this)"><span class="big">R${t.hour.price}</span><span class="small">1 hour</span></button>
+        <button type="button" class="opt selected" onclick="selectTier('hour', this)"><span class="big">R${t.hour.price}</span><span class="small">${fmtMins(t.hour.mins)}</span></button>
         <button type="button" class="opt" onclick="selectTier('full', this)"><span class="big">R${t.full.price}</span><span class="small">Full charge</span></button>
       </div>
     </div>
@@ -934,7 +935,7 @@ function renderActiveBay(bay) {
       ${wa ? `<a class="btn btn-wa" href="${waLink(bay)}" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.3-.5.1-1 .1-3.3-.8-2.8-1.1-4.5-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l2 .9c.3.1.5.2.5.3.1.2.1.6-.1 1.3z"/></svg>
         Notify</a>` : ''}
-      ${canExtend ? `<button type="button" class="btn btn-soft" onclick="extendBay(${bay.id})">+1 hr · R${state.settings.priceExt}</button>` : ''}
+      ${canExtend ? `<button type="button" class="btn btn-soft" onclick="extendBay(${bay.id})">+${fmtMins(+state.settings.extMins || 60)} · R${state.settings.priceExt}</button>` : ''}
     </div>` : ''}
     <button type="button" class="btn btn-soft" onclick="renderSwapPicker(${bay.id})">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3 21 7l-4 4"/><path d="M3 11V9a2 2 0 0 1 2-2h16"/><path d="M7 21 3 17l4-4"/><path d="M21 13v2a2 2 0 0 1-2 2H3"/></svg>
@@ -1116,13 +1117,14 @@ function extendBay(id) {
   const bay = state.bays.find(b => b.id === id);
   if (!bay || !bay.occupied || !bay.durationMins) return;
   const p = +state.settings.priceExt;
+  const extMins = +state.settings.extMins || 60;
   bay.extensions = (bay.extensions || 0) + 1;
-  bay.durationMins += 60;
+  bay.durationMins += extMins;
   bay.price += p;
   bay.overdueNotified = false;
-  const base = bay.tierBase || bay.tierLabel.replace(/ \+\d+h ext$/, '');
+  const base = bay.tierBase || bay.tierLabel.replace(/ \+\d+h? ext$/, '');
   bay.tierBase = base;
-  bay.tierLabel = `${base} +${bay.extensions}h ext`;
+  bay.tierLabel = `${base} +${bay.extensions} ext`;
   bay.rev = Date.now();
   saveState();
   render();
@@ -1193,7 +1195,7 @@ function insights() {
 
   const byTier = {};
   h.forEach(x => {
-    const k = (x.tierLabel || '').replace(/ \+\d+h ext$/, '') || 'Unknown';
+    const k = (x.tierLabel || '').replace(/ \+\d+h? ext$/, '') || 'Unknown';
     byTier[k] = byTier[k] || { sessions: 0, revenue: 0 };
     byTier[k].sessions++; byTier[k].revenue += x.price;
   });
@@ -1301,11 +1303,15 @@ function openSettings() {
         <button type="button" class="opt center${s.bayCount !== 10 ? ' selected' : ''}" id="setBay20" onclick="document.getElementById('setBay20').classList.add('selected');document.getElementById('setBay10').classList.remove('selected')">20 bays</button>
       </div>
     </div>
-    <div class="section-lbl"><span>Prices (new check-ins only)</span></div>
-    <div class="two" style="grid-template-columns:1fr 1fr 1fr">
-      <div class="field"><label for="setHour">1 hour</label><input type="number" inputmode="numeric" id="setHour" value="${s.priceHour}" min="0" /></div>
-      <div class="field"><label for="setFull">Full</label><input type="number" inputmode="numeric" id="setFull" value="${s.priceFull}" min="0" /></div>
-      <div class="field"><label for="setExt">+1 hr</label><input type="number" inputmode="numeric" id="setExt" value="${s.priceExt}" min="0" /></div>
+    <div class="section-lbl"><span>Prices & times (new check-ins only)</span></div>
+    <div class="two" style="grid-template-columns:1fr 1fr">
+      <div class="field"><label for="setHourMins">1st tier length (mins)</label><input type="number" inputmode="numeric" id="setHourMins" value="${s.hourMins}" min="5" /></div>
+      <div class="field"><label for="setHour">1st tier price (R)</label><input type="number" inputmode="numeric" id="setHour" value="${s.priceHour}" min="0" /></div>
+    </div>
+    <div class="field"><label for="setFull">Full charge price (R)</label><input type="number" inputmode="numeric" id="setFull" value="${s.priceFull}" min="0" /></div>
+    <div class="two" style="grid-template-columns:1fr 1fr">
+      <div class="field"><label for="setExtMins">Extension length (mins)</label><input type="number" inputmode="numeric" id="setExtMins" value="${s.extMins}" min="5" /></div>
+      <div class="field"><label for="setExt">Extension price (R)</label><input type="number" inputmode="numeric" id="setExt" value="${s.priceExt}" min="0" /></div>
     </div>
     <div class="field">
       <label for="setRecheck">Remind me to recheck a bay every (minutes)</label>
@@ -1429,6 +1435,8 @@ function saveSettings() {
   s.priceHour = num('setHour', s.priceHour);
   s.priceFull = num('setFull', s.priceFull);
   s.priceExt = num('setExt', s.priceExt);
+  s.hourMins = Math.max(5, num('setHourMins', s.hourMins));
+  s.extMins = Math.max(5, num('setExtMins', s.extMins));
   s.checkIntervalMins = Math.max(2, num('setRecheck', s.checkIntervalMins));
   state.settingsRev = Date.now();
   saveState();
