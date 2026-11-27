@@ -140,6 +140,11 @@
   .bay-num small { font-size: 0.62rem; font-weight: 700; color: var(--muted); letter-spacing: 0.08em; display: block; margin-bottom: 3px; }
   .badge { font-size: 0.64rem; font-weight: 800; letter-spacing: 0.05em; padding: 4px 8px; border-radius: 999px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 5px; }
   .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .bay-right { display: flex; align-items: center; gap: 6px; }
+  .recheck-dot { font-size: 0.78rem; line-height: 1; filter: drop-shadow(0 0 3px rgba(96,165,250,0.6)); }
+  .swap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+  .swap-opt { padding: 14px 0; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-weight: 800; font-size: 0.92rem; }
+  .swap-opt:active { transform: scale(0.95); }
 
   .bay.free { background: linear-gradient(160deg, rgba(34,197,94,0.10), rgba(34,197,94,0.03)); border-color: rgba(34,197,94,0.32); border-style: dashed; }
   .bay.free .badge { background: var(--green-soft); color: var(--green-text); }
@@ -519,18 +524,45 @@
   which stores it in a private Vercel Blob so the viewer can watch live.
 */
 const STORAGE_KEY = 'chargevault_20_state_v1';
-const BAY_COUNT = 20;
-const DEFAULT_SETTINGS = { eventName: '', priceHour: 30, priceFull: 50, priceExt: 30, lastBackup: null };
+const BAY_COUNTS = [10, 20]; // the two physical machines you run
+const MAX_BAY_COUNT = Math.max(...BAY_COUNTS);
+const DEFAULT_SETTINGS = { eventName: '', priceHour: 30, priceFull: 50, priceExt: 30, lastBackup: null, checkIntervalMins: 10, bayCount: 20 };
+function uid() { try { return crypto.randomUUID(); } catch (e) { return `id-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`; } }
+function validBayCount(n) { return BAY_COUNTS.includes(+n) ? +n : 20; }
 
-function blankBay(id) {
+function blankBay(id, rev) {
   return {
     id, occupied: false, customer: '', device: '', phone: '', lockerPin: '',
     batteryIn: null, tierKey: '', tierBase: '', tierLabel: '', price: 0, durationMins: 0,
-    extensions: 0, paymentMethod: 'Cash', checkInTime: null, code: '', overdueNotified: false
+    extensions: 0, paymentMethod: 'Cash', checkInTime: null, code: '', overdueNotified: false,
+    batterySaverOn: null, by: '', lastChecked: null, recheckNotified: false, rev: rev || 0
   };
 }
 function freshState() {
-  return { settings: { ...DEFAULT_SETTINGS }, bays: Array.from({ length: BAY_COUNT }, (_, i) => blankBay(i + 1)), history: [] };
+  const bayCount = DEFAULT_SETTINGS.bayCount;
+  return { settings: { ...DEFAULT_SETTINGS }, settingsRev: 0, bays: Array.from({ length: bayCount }, (_, i) => blankBay(i + 1)), history: [], swaps: [] };
+}
+
+// Grows (or, when nothing beyond the cut is occupied, shrinks) state.bays to match n.
+// Returns {ok:true} or {ok:false, occupied:[ids]} if shrinking would drop active sessions.
+function resizeBays(n) {
+  const target = validBayCount(n);
+  if (target > state.bays.length) {
+    for (let i = state.bays.length; i < target; i++) state.bays.push(blankBay(i + 1));
+  } else if (target < state.bays.length) {
+    const dropped = state.bays.slice(target);
+    const stillBusy = dropped.filter(b => b.occupied).map(b => b.id);
+    if (stillBusy.length) return { ok: false, occupied: stillBusy };
+    state.bays = state.bays.slice(0, target);
+  }
+  state.settings.bayCount = target;
+  return { ok: true };
+}
+
+// Only ever grows automatically (safe) - used after merging in someone else's settings change.
+function growBaysTo(n) {
+  const target = validBayCount(n);
+  for (let i = state.bays.length; i < target; i++) state.bays.push(blankBay(i + 1));
 }
 
 let state = freshState();
@@ -539,16 +571,24 @@ let searchTerm = '';
 let selectedBayId = null;
 let formTier = 'hour';
 let formPay = 'Cash';
+let formBattSaver = null;
 let lastRelease = null;
 let toastTimer = null;
 let pinVisible = false;
 
 /* ---------- Storage (localStorage only, no database) ---------- */
 function normalise(s) {
-  const out = freshState();
+  const out = { settings: { ...DEFAULT_SETTINGS }, settingsRev: 0, bays: [], history: [], swaps: [] };
   out.settings = { ...DEFAULT_SETTINGS, ...(s.settings || {}) };
-  out.bays = out.bays.map((b, i) => ({ ...b, ...((s.bays || [])[i] || {}) }));
+  out.settings.bayCount = validBayCount(out.settings.bayCount);
+  out.settingsRev = Number(s.settingsRev) || 0;
+  // Build the bay list at whatever size settings.bayCount says, carrying over any incoming
+  // bay data - so an export/merge from the other machine size reshapes cleanly either way.
+  const incoming = Array.isArray(s.bays) ? s.bays : [];
+  const count = Math.max(out.settings.bayCount, incoming.length);
+  out.bays = Array.from({ length: count }, (_, i) => ({ ...blankBay(i + 1), ...(incoming[i] || {}) }));
   out.history = Array.isArray(s.history) ? s.history : [];
+  out.swaps = Array.isArray(s.swaps) ? s.swaps : [];
   return out;
 }
 function loadState() {
@@ -556,7 +596,7 @@ function loadState() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed && Array.isArray(parsed.bays) && parsed.bays.length === BAY_COUNT) state = normalise(parsed);
+      if (parsed && Array.isArray(parsed.bays)) state = normalise(parsed);
     }
   } catch (e) { console.error('Failed to load saved state', e); }
 }
@@ -610,6 +650,13 @@ function getBayStatus(bay) {
   return { status: 'charging', label: 'Charging', text: `${fmtMins(Math.ceil(left))} left`, pct, elapsed };
 }
 
+function needsRecheck(bay) {
+  if (!bay.occupied) return false;
+  const mins = +state.settings.checkIntervalMins || 10;
+  const since = bay.lastChecked || bay.checkInTime;
+  return Date.now() - since > mins * 60000;
+}
+
 function matchesSearch(bay) {
   if (!searchTerm) return true;
   const q = searchTerm.toLowerCase();
@@ -635,6 +682,7 @@ function render() {
   let free = 0, busy = 0, over = 0;
   const cards = [];
   const newlyOverdue = [];
+  const newlyNeedsRecheck = [];
 
   state.bays.forEach(bay => {
     const info = getBayStatus(bay);
@@ -642,6 +690,7 @@ function render() {
     else { busy++; if (info.status === 'overdue') over++; }
 
     if (info.status === 'overdue' && !alreadyNotified(bay)) newlyOverdue.push(bay);
+    if (role !== 'viewer' && needsRecheck(bay) && !bay.recheckNotified) { bay.recheckNotified = true; newlyNeedsRecheck.push(bay); }
 
     if (currentFilter === 'free' && info.status !== 'free') return;
     if (currentFilter === 'busy' && info.status === 'free') return;
@@ -662,9 +711,10 @@ function render() {
         </button>`);
     } else {
       const meter = info.pct < 0 ? `<div class="meter full"><span></span></div>` : `<div class="meter"><span style="width:${info.pct.toFixed(1)}%"></span></div>`;
+      const recheckBadge = role !== 'viewer' && needsRecheck(bay) ? `<span class="recheck-dot" title="Hasn't been rechecked in a while">👁</span>` : '';
       cards.push(`
         <button class="bay ${info.status}" onclick="openBay(${bay.id})" aria-label="Bay ${bay.id}, ${escapeHtml(bay.customer)}, ${info.text}">
-          <div class="bay-top"><div class="bay-num"><small>BAY</small>${pad(bay.id)}</div><span class="badge">${info.label}</span></div>
+          <div class="bay-top"><div class="bay-num"><small>BAY</small>${pad(bay.id)}</div><div class="bay-right">${recheckBadge}<span class="badge">${info.label}</span></div></div>
           <div class="bay-customer">${escapeHtml(bay.customer)}</div>
           <div class="bay-device">${isNum(bay.batteryIn) ? `<span class="mini-batt">${bay.batteryIn}%</span>` : ''}<span style="overflow:hidden;text-overflow:ellipsis">${escapeHtml(bay.device || 'No device note')}</span></div>
           <div class="bay-bottom">${meter}
@@ -679,12 +729,18 @@ function render() {
 
   const set = (id, v) => { document.getElementById(id).textContent = v; };
   set('statFree', free); set('statBusy', busy); set('statOver', over);
-  set('cAll', BAY_COUNT); set('cFree', free); set('cBusy', busy); set('cOver', over);
+  set('cAll', state.bays.length); set('cFree', free); set('cBusy', busy); set('cOver', over);
   set('clock', formatTime(Date.now()));
   set('brandTitle', state.settings.eventName || 'ChargeVault 20');
   updateSyncUi();
   updateRevenue();
   updateBackupDot();
+
+  if (newlyNeedsRecheck.length && !newlyOverdue.length) {
+    saveState();
+    vibrate(60);
+    showToast(newlyNeedsRecheck.length === 1 ? `Check bay ${pad(newlyNeedsRecheck[0].id)} is actually charging` : `${newlyNeedsRecheck.length} bays need a quick recheck`, null, null, 4000);
+  }
 
   if (newlyOverdue.length) {
     saveState();
@@ -769,6 +825,7 @@ function renderCheckIn(bay) {
   const t = tiers();
   formTier = 'hour';
   formPay = 'Cash';
+  formBattSaver = null;
   document.getElementById('modalSub').textContent = 'New check-in';
   document.getElementById('modalBody').innerHTML = `
     <div class="field" id="fCustomer">
@@ -796,6 +853,14 @@ function renderCheckIn(bay) {
       <label>Battery at drop-off</label>
       ${batteryPicker('battIn', [5, 10, 15, 20, 30, 40, 50], 20)}
       <div class="err">Set the battery % for the analysis report.</div>
+    </div>
+    <div class="field" id="fSaver">
+      <label>Battery saving mode (ask the customer)</label>
+      <div class="seg">
+        <button type="button" class="opt" onclick="selectSaver(true, this)">Switched off</button>
+        <button type="button" class="opt" onclick="selectSaver(false, this)">Still on</button>
+      </div>
+      <div class="err">Check and tick one - it affects charge speed.</div>
     </div>
     <div class="field">
       <label>Charging option</label>
@@ -849,24 +914,105 @@ function renderActiveBay(bay) {
       <div class="row"><span>Phone / case</span><strong>${escapeHtml(bay.device || 'Not noted')}</strong></div>
       ${bay.phone ? `<div class="row"><span>Cellphone</span><strong>${escapeHtml(bay.phone)}</strong></div>` : ''}
       <div class="row"><span>Battery in</span><strong>${battText(bay.batteryIn)}</strong></div>
+      <div class="row"><span>Battery saver</span><strong>${bay.batterySaverOn === true ? 'Switched off' : bay.batterySaverOn === false ? 'Still on' : 'Not asked'}</strong></div>
       <div class="row"><span>Option</span><strong>${escapeHtml(bay.tierLabel)}</strong></div>
       <div class="row"><span>Paid</span><strong>R${bay.price} · ${escapeHtml(bay.paymentMethod)}</strong></div>
+      ${bay.by ? `<div class="row"><span>Checked in by</span><strong>${escapeHtml(bay.by)}</strong></div>` : ''}
+      <div class="row"><span>Last checked charging</span><strong>${ago(bay.lastChecked || bay.checkInTime)}</strong></div>
     </div>
     ${!bay.lockerPin ? `<div class="note warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span>No locker PIN saved for this bay.</span></div>` : ''}
+    ${needsRecheck(bay) ? `<div class="note warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span>It's been a while - go check this phone is actually charging.</span></div>` : ''}
     <div class="note">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
       <span>Forgot their pickup code? Match the lock screen wallpaper to the phone before you open the locker.</span>
     </div>
+    <button type="button" class="btn btn-soft" onclick="recheckBay(${bay.id})">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>
+      I checked - it's charging
+    </button>
     ${wa || canExtend ? `<div class="${wa && canExtend ? 'btn-row' : ''}">
       ${wa ? `<a class="btn btn-wa" href="${waLink(bay)}" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.3-.5.1-1 .1-3.3-.8-2.8-1.1-4.5-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l2 .9c.3.1.5.2.5.3.1.2.1.6-.1 1.3z"/></svg>
         Notify</a>` : ''}
       ${canExtend ? `<button type="button" class="btn btn-soft" onclick="extendBay(${bay.id})">+1 hr · R${state.settings.priceExt}</button>` : ''}
     </div>` : ''}
+    <button type="button" class="btn btn-soft" onclick="renderSwapPicker(${bay.id})">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3 21 7l-4 4"/><path d="M3 11V9a2 2 0 0 1 2-2h16"/><path d="M7 21 3 17l4-4"/><path d="M21 13v2a2 2 0 0 1-2 2H3"/></svg>
+      Swap to another bay
+    </button>
     <button type="button" class="btn btn-red" onclick="renderRelease(${bay.id})">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
       Customer is collecting
     </button>`;
+}
+
+/* ---------- Swap bay ---------- */
+function renderSwapPicker(id) {
+  const bay = state.bays.find(b => b.id === id);
+  if (!bay || !bay.occupied) return;
+  const free = state.bays.filter(b => !b.occupied && b.id !== id);
+  document.getElementById('modalSub').textContent = `Move ${bay.customer || 'this phone'} to a different bay`;
+  document.getElementById('modalBody').innerHTML = !free.length ? `
+      <div class="note warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span>No open bays right now to swap into.</span></div>
+      <button type="button" class="btn btn-soft" onclick="renderActiveBay(state.bays.find(b => b.id === ${id}))">Back</button>` : `
+      <div class="section-lbl"><span>Pick the open bay to move to</span></div>
+      <div class="swap-grid">${free.map(b => `<button type="button" class="swap-opt" onclick="renderSwapPin(${id}, ${b.id})">Bay ${pad(b.id)}</button>`).join('')}</div>
+      <button type="button" class="btn btn-soft" onclick="renderActiveBay(state.bays.find(b => b.id === ${id}))">Back</button>`;
+}
+
+function renderSwapPin(fromId, toId) {
+  const from = state.bays.find(b => b.id === fromId);
+  if (!from || !from.occupied) return;
+  document.getElementById('modalSub').textContent = `Bay ${pad(fromId)} → Bay ${pad(toId)}`;
+  document.getElementById('modalBody').innerHTML = `
+    <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <span>It's a different physical locker, so it needs its own PIN. Everything else (timer, price, pickup code) moves with the phone.</span></div>
+    <div class="field" id="fSwapPin">
+      <label for="inpSwapPin">New locker PIN / password for Bay ${pad(toId)}</label>
+      <div class="input-btn">
+        <input type="text" id="inpSwapPin" class="pin-input" placeholder="PIN set on this locker" autocomplete="off" autocapitalize="off" spellcheck="false" />
+        <button type="button" onclick="document.getElementById('inpSwapPin').value = randomPin(); document.getElementById('fSwapPin').classList.remove('error')">Generate</button>
+      </div>
+      <div class="err">Add the PIN you set on the new locker.</div>
+    </div>
+    <button type="button" class="btn btn-go" onclick="confirmSwap(${fromId}, ${toId})">Move phone to Bay ${pad(toId)}</button>
+    <button type="button" class="btn btn-soft" onclick="renderSwapPicker(${fromId})">Back</button>`;
+  document.getElementById('inpSwapPin').addEventListener('input', e => e.target.closest('.field').classList.remove('error'));
+}
+
+function confirmSwap(fromId, toId) {
+  const from = state.bays.find(b => b.id === fromId);
+  const to = state.bays.find(b => b.id === toId);
+  if (!from || !to || !from.occupied || to.occupied) { showToast('That bay is no longer available'); return renderSwapPicker(fromId); }
+  const pinEl = document.getElementById('inpSwapPin');
+  const newPin = pinEl ? pinEl.value.trim() : '';
+  if (!newPin) { document.getElementById('fSwapPin').classList.add('error'); vibrate(80); return; }
+  const now = Date.now();
+  const swapEntry = { id: uid(), fromBay: fromId, toBay: toId, customer: from.customer, at: now, by: meName || '' };
+  const moved = { ...from, id: toId, lockerPin: newPin, rev: Date.now(), lastChecked: now, recheckNotified: false };
+  Object.assign(to, moved);
+  Object.assign(from, blankBay(fromId, Date.now()));
+  state.swaps = state.swaps || [];
+  state.swaps.unshift(swapEntry);
+  saveState();
+  selectedBayId = toId;
+  render();
+  vibrate(30);
+  showToast(`Moved to Bay ${pad(toId)}`);
+  renderActiveBay(to);
+}
+
+function recheckBay(id) {
+  const bay = state.bays.find(b => b.id === id);
+  if (!bay || !bay.occupied) return;
+  bay.lastChecked = Date.now();
+  bay.recheckNotified = false;
+  bay.rev = Date.now();
+  saveState();
+  render();
+  renderActiveBay(bay);
+  showToast(`Bay ${pad(id)} confirmed charging`);
+  vibrate(20);
 }
 
 function renderViewerBay(bay) {
@@ -887,7 +1033,7 @@ function renderViewerBay(bay) {
       ${bay.durationMins ? `<div class="row"><span>Due back</span><strong>${formatTime(bay.checkInTime + bay.durationMins * 60000)}</strong></div>` : ''}
     </div>
     <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-      <span>View only. Locker PINs and customer cellphone numbers stay on the stand phone.</span></div>
+      <span>View only. Locker PINs and customer cellphone numbers aren't shown here.</span></div>
     <button type="button" class="btn btn-soft" onclick="closeBayModal()">Close</button>`;
 }
 
@@ -920,6 +1066,7 @@ function renderRelease(id) {
 
 function selectTier(key, btn) { formTier = key; btn.parentElement.querySelectorAll('.opt').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); }
 function selectPay(method, btn) { formPay = method; btn.parentElement.querySelectorAll('.opt').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); }
+function selectSaver(on, btn) { formBattSaver = on; btn.parentElement.querySelectorAll('.opt').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); btn.closest('.field')?.classList.remove('error'); }
 
 function confirmCheckIn() {
   const customer = document.getElementById('inpCustomer').value.trim();
@@ -933,6 +1080,7 @@ function confirmCheckIn() {
   flag('fCustomer', !customer);
   flag('fPin', !lockerPin);
   flag('fBattIn', batteryIn === null);
+  flag('fSaver', formBattSaver === null);
   if (firstBad) {
     vibrate(80);
     document.getElementById(firstBad).scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -942,10 +1090,12 @@ function confirmCheckIn() {
 
   const t = tiers()[formTier];
   const bay = state.bays.find(b => b.id === selectedBayId);
-  Object.assign(bay, blankBay(bay.id), {
+  const now = Date.now();
+  Object.assign(bay, blankBay(bay.id, Date.now()), {
     occupied: true, customer, device, phone, lockerPin, batteryIn,
     tierKey: t.key, tierBase: t.label, tierLabel: t.label, price: t.price, durationMins: t.mins,
-    paymentMethod: formPay, checkInTime: Date.now(), code: newCode()
+    paymentMethod: formPay, checkInTime: now, code: newCode(),
+    batterySaverOn: formBattSaver, by: meName || '', lastChecked: now
   });
   saveState();
   render();
@@ -973,6 +1123,7 @@ function extendBay(id) {
   const base = bay.tierBase || bay.tierLabel.replace(/ \+\d+h ext$/, '');
   bay.tierBase = base;
   bay.tierLabel = `${base} +${bay.extensions}h ext`;
+  bay.rev = Date.now();
   saveState();
   render();
   renderActiveBay(bay);
@@ -989,14 +1140,15 @@ function releaseBay(id, skipBattery) {
     return;
   }
   const entry = {
-    bayId: bay.id, customer: bay.customer, device: bay.device, phone: bay.phone || '', lockerPin: bay.lockerPin || '',
+    id: uid(), bayId: bay.id, customer: bay.customer, device: bay.device, phone: bay.phone || '', lockerPin: bay.lockerPin || '',
     tierKey: bay.tierKey || (bay.durationMins ? 'hour' : 'full'), tierLabel: bay.tierLabel, extensions: bay.extensions || 0,
     price: bay.price, paymentMethod: bay.paymentMethod, checkInTime: bay.checkInTime, releasedTime: Date.now(),
-    code: bay.code || '', batteryIn: isNum(bay.batteryIn) ? bay.batteryIn : null, batteryOut
+    code: bay.code || '', batteryIn: isNum(bay.batteryIn) ? bay.batteryIn : null, batteryOut,
+    batterySaverOn: bay.batterySaverOn, by: bay.by || '', releasedBy: meName || ''
   };
   lastRelease = { bay: { ...bay }, entry };
   state.history.unshift(entry);
-  Object.assign(bay, blankBay(bay.id));
+  Object.assign(bay, blankBay(bay.id, Date.now()));
   saveState();
   closeBayModal();
   render();
@@ -1009,7 +1161,7 @@ function undoRelease() {
   const { bay: saved, entry } = lastRelease;
   const bay = state.bays.find(b => b.id === saved.id);
   if (bay.occupied) { showToast(`Bay ${pad(saved.id)} was already reused`); return; }
-  Object.assign(bay, saved);
+  Object.assign(bay, saved, { rev: Date.now() });
   const idx = state.history.indexOf(entry);
   if (idx > -1) state.history.splice(idx, 1);
   lastRelease = null;
@@ -1046,6 +1198,8 @@ function insights() {
     byTier[k].sessions++; byTier[k].revenue += x.price;
   });
 
+  const rateOf = list => avg(list.map(sessionStats).map(s => s.rate).filter(isNum));
+
   return {
     served: h.length,
     active: state.bays.filter(b => b.occupied).length,
@@ -1055,6 +1209,8 @@ function insights() {
     avgIn: avg(ins),
     avgOut: avg(h.map(x => x.batteryOut).filter(isNum)),
     extensions: h.reduce((a, x) => a + (x.extensions || 0), 0),
+    rateSaverOff: rateOf(h.filter(x => x.batterySaverOn === true)),
+    rateSaverOn: rateOf(h.filter(x => x.batterySaverOn === false)),
     hours, hrKeys, busiest, byTier
   };
 }
@@ -1080,15 +1236,28 @@ function openHistory() {
   const items = state.history.map(h => {
     const s = sessionStats(h);
     const batt = isNum(h.batteryIn) || isNum(h.batteryOut) ? ` · ${battText(h.batteryIn)} → ${battText(h.batteryOut)}` : '';
+    const who = h.by || h.releasedBy ? ` · ${escapeHtml(h.releasedBy || h.by)}` : '';
+    const saver = h.batterySaverOn === true ? ' · saver off' : h.batterySaverOn === false ? ' · saver on' : '';
     return `
     <div class="log-item">
       <div style="min-width:0">
         <strong>Bay ${pad(h.bayId)} · ${escapeHtml(h.customer)}</strong>
-        <div class="sub">${formatTime(h.checkInTime)} to ${formatTime(h.releasedTime)} (${fmtMins(s.mins || 0)})${batt}</div>
+        <div class="sub">${formatTime(h.checkInTime)} to ${formatTime(h.releasedTime)} (${fmtMins(s.mins || 0)})${batt}${saver}${who}</div>
       </div>
       <div class="amt"><strong>R${h.price}</strong><div class="sub">${escapeHtml(h.paymentMethod)}</div></div>
     </div>`;
   }).join('');
+
+  const swapItems = (state.swaps || []).slice(0, 30).map(sw => `
+    <div class="log-item">
+      <div style="min-width:0"><strong>Bay ${pad(sw.fromBay)} → Bay ${pad(sw.toBay)}</strong><div class="sub">${escapeHtml(sw.customer || '')} · ${formatTime(sw.at)}${sw.by ? ' · ' + escapeHtml(sw.by) : ''}</div></div>
+    </div>`).join('');
+
+  const saverCompare = (ins.rateSaverOff !== null || ins.rateSaverOn !== null) ? `
+    <div class="sum-grid" style="margin-top:8px">
+      <div class="sum"><div class="v">${ins.rateSaverOff === null ? '-' : r(ins.rateSaverOff) + '%/h'}</div><div class="l">Speed, saver off</div></div>
+      <div class="sum"><div class="v">${ins.rateSaverOn === null ? '-' : r(ins.rateSaverOn) + '%/h'}</div><div class="l">Speed, saver on</div></div>
+    </div>` : '';
 
   document.getElementById('historyBody').innerHTML = `
     <div class="sum-grid">
@@ -1099,10 +1268,12 @@ function openHistory() {
       <div class="sum"><div class="v">${ins.avgMins === null ? '-' : fmtMins(ins.avgMins)}</div><div class="l">Avg time</div></div>
       <div class="sum"><div class="v">${ins.avgRate === null ? '-' : r(ins.avgRate) + '%/h'}</div><div class="l">Charge speed</div></div>
     </div>
+    ${saverCompare}
     <div class="section-lbl" style="margin-top:14px"><span>Check-ins by hour</span><span>${ins.busiest !== null ? 'Busiest ' + pad(ins.busiest) + ':00' : ''}</span></div>
     <div class="bars">${bars}</div>
     <div class="section-lbl"><span>Collected</span><span>${ins.served}</span></div>
     <div class="log">${items || '<p class="muted-center">No collections yet.</p>'}</div>
+    ${swapItems ? `<div class="section-lbl" style="margin-top:14px"><span>Bay swaps</span><span>${(state.swaps || []).length}</span></div><div class="log">${swapItems}</div>` : ''}
     ${role !== 'viewer' ? `<label class="toggle"><span>Include locker PINs in PDF<small>Leave off if you share the report</small></span><input type="checkbox" id="pdfPins" /></label>` : ''}
     <button class="btn btn-go" onclick="exportPDF(!!(document.getElementById('pdfPins') || {}).checked)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 12v6M9 15l3 3 3-3"/></svg>
@@ -1123,17 +1294,28 @@ function openSettings() {
       <label for="setEvent">Event name</label>
       <input type="text" id="setEvent" value="${escapeHtml(s.eventName)}" placeholder="e.g. Cotton Fest 2026" autocomplete="off" />
     </div>
+    <div class="field">
+      <label>Which machine is this?</label>
+      <div class="seg">
+        <button type="button" class="opt center${s.bayCount === 10 ? ' selected' : ''}" id="setBay10" onclick="document.getElementById('setBay10').classList.add('selected');document.getElementById('setBay20').classList.remove('selected')">10 bays</button>
+        <button type="button" class="opt center${s.bayCount !== 10 ? ' selected' : ''}" id="setBay20" onclick="document.getElementById('setBay20').classList.add('selected');document.getElementById('setBay10').classList.remove('selected')">20 bays</button>
+      </div>
+    </div>
     <div class="section-lbl"><span>Prices (new check-ins only)</span></div>
     <div class="two" style="grid-template-columns:1fr 1fr 1fr">
       <div class="field"><label for="setHour">1 hour</label><input type="number" inputmode="numeric" id="setHour" value="${s.priceHour}" min="0" /></div>
       <div class="field"><label for="setFull">Full</label><input type="number" inputmode="numeric" id="setFull" value="${s.priceFull}" min="0" /></div>
       <div class="field"><label for="setExt">+1 hr</label><input type="number" inputmode="numeric" id="setExt" value="${s.priceExt}" min="0" /></div>
     </div>
+    <div class="field">
+      <label for="setRecheck">Remind me to recheck a bay every (minutes)</label>
+      <input type="number" inputmode="numeric" id="setRecheck" value="${s.checkIntervalMins}" min="2" />
+    </div>
     <button class="btn btn-go" onclick="saveSettings()">Save settings</button>
     <div class="hr"></div>
     <div class="note warn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-      <span>This phone holds the main copy. Changes sync to a private online copy for live viewing, but locker PINs and cellphone numbers never leave this phone. If this browser's data is cleared, those are lost, so still download a backup every few hours. Last backup: <strong>${last}</strong></span>
+      <span>Everything, including locker PINs and cellphone numbers, syncs to a private online copy so the whole team can run the stand. Your sister's view-only login still never sees those two fields. If this browser's data is cleared before it's synced, unsynced changes are lost, so still download a backup every few hours. Last backup: <strong>${last}</strong></span>
     </div>
     <div class="btn-row">
       <button class="btn btn-soft" onclick="downloadBackup()">Download backup</button>
@@ -1143,24 +1325,112 @@ function openSettings() {
     <div class="hr"></div>
     <div class="section-lbl"><span>Account & sync</span></div>
     <div class="details">
-      <div class="row"><span>This phone</span><strong>${syncAvailable ? 'Stand phone (can edit)' : 'Offline only'}</strong></div>
+      <div class="row"><span>Logged in as</span><strong>${escapeHtml(meName || 'Owner')}</strong></div>
+      <div class="row"><span>This phone</span><strong>${syncAvailable ? 'Can edit' : 'Offline only'}</strong></div>
       <div class="row"><span>Last synced</span><strong>${sync.lastSyncedAt ? `${formatDate(sync.lastSyncedAt)}, ${formatTime(sync.lastSyncedAt)}` : 'Not yet'}</strong></div>
       <div class="row"><span>Status</span><strong>${escapeHtml(syncLabel())}</strong></div>
     </div>
     ${syncAvailable ? `<div class="btn-row">
       <button class="btn btn-soft" onclick="forceSync()">Sync now</button>
       <button class="btn btn-soft" style="color:var(--red-text)" onclick="logout()">Log out</button>
-    </div>` : ''}`;
+    </div>` : ''}
+    <div class="hr"></div>
+    <div class="section-lbl"><span>Team</span></div>
+    <div id="teamSection"><p class="muted-center">Loading team...</p></div>`;
   openSheet('settingsModal');
+  loadTeamSection();
+}
+
+/* ---------- Team accounts ---------- */
+async function loadTeamSection() {
+  const el = document.getElementById('teamSection');
+  if (!el) return;
+  if (!syncAvailable) { el.innerHTML = `<p class="muted-center">Connect to the internet once to set up team logins.</p>`; return; }
+  try {
+    const r = await apiFetch('team-list');
+    if (r.status === 401) return sessionExpired();
+    if (!r.ok) throw new Error(String(r.status));
+    const j = await r.json();
+    renderTeamList(j.people || []);
+  } catch (e) {
+    el.innerHTML = `<p class="muted-center">Could not load the team list. Check your connection.</p>`;
+  }
+}
+
+function renderTeamList(people) {
+  const el = document.getElementById('teamSection');
+  if (!el) return;
+  const rows = people.map(p => `
+    <div class="row"><span>${escapeHtml(p.name)}<br><small style="color:var(--muted)">${p.role === 'viewer' ? 'View only' : 'Full access'}</small></span>
+      <button type="button" class="link-btn" style="color:var(--red-text)" onclick="teamRemove('${p.id}', '${escapeHtml(p.name).replace(/'/g, "&#39;")}')">Remove</button></div>`).join('');
+  el.innerHTML = `
+    <div class="details">
+      <div class="row"><span>Master password</span><strong>Always works</strong></div>
+      ${rows}
+    </div>
+    <p style="font-size:0.76rem;color:var(--muted);margin:8px 0 2px;line-height:1.45">Add anyone running the stand. They log in with their own name and password, full access unless you set them to view only - and removing someone signs them out right away.</p>
+    <div class="field"><label for="teamName">Their name</label><input type="text" id="teamName" placeholder="e.g. Karabo" autocomplete="off" /></div>
+    <div class="field"><label for="teamPw">Password for them</label><input type="text" id="teamPw" placeholder="At least 4 characters" autocomplete="off" /></div>
+    <div class="field">
+      <label>Access</label>
+      <div class="seg">
+        <button type="button" class="opt center selected" id="teamRoleOwner" onclick="document.getElementById('teamRoleOwner').classList.add('selected');document.getElementById('teamRoleViewer').classList.remove('selected')">Full access</button>
+        <button type="button" class="opt center" id="teamRoleViewer" onclick="document.getElementById('teamRoleViewer').classList.add('selected');document.getElementById('teamRoleOwner').classList.remove('selected')">View only</button>
+      </div>
+    </div>
+    <div class="login-err" id="teamErr"></div>
+    <button type="button" class="btn btn-soft" onclick="teamAdd()">Add to team</button>`;
+}
+
+async function teamAdd() {
+  const name = document.getElementById('teamName').value.trim();
+  const password = document.getElementById('teamPw').value;
+  const roleToAdd = document.getElementById('teamRoleViewer').classList.contains('selected') ? 'viewer' : 'owner';
+  const err = document.getElementById('teamErr');
+  err.textContent = '';
+  if (!name) { err.textContent = 'Add their name.'; return; }
+  if (password.length < 4) { err.textContent = 'Password needs at least 4 characters.'; return; }
+  try {
+    const r = await apiFetch('team-add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, password, role: roleToAdd }) });
+    if (r.status === 401) return sessionExpired();
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) { renderTeamList(j.people || []); showToast(`${name} added`); }
+    else if (j.error === 'password_in_use') err.textContent = 'That password is already taken - pick another.';
+    else if (j.error === 'too_many') err.textContent = 'Team list is full.';
+    else err.textContent = 'Could not add them. Try again.';
+  } catch (e) { err.textContent = 'No internet. Connect and try again.'; }
+}
+
+async function teamRemove(id, name) {
+  const ok = await askConfirm(`Remove ${name}?`, 'They will be logged out everywhere immediately.', 'Remove');
+  if (!ok) return;
+  try {
+    const r = await apiFetch('team-remove', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    if (r.status === 401) return sessionExpired();
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) { renderTeamList(j.people || []); showToast(`${name} removed`); }
+    else showToast('Could not remove them. Try again.');
+  } catch (e) { showToast('No internet. Connect and try again.'); }
 }
 
 function saveSettings() {
   const num = (id, fallback) => { const v = parseInt(document.getElementById(id).value, 10); return isNaN(v) || v < 0 ? fallback : v; };
   const s = state.settings;
+  const wantBayCount = document.getElementById('setBay10').classList.contains('selected') ? 10 : 20;
+  if (wantBayCount !== s.bayCount) {
+    const r = resizeBays(wantBayCount);
+    if (!r.ok) {
+      showToast(`Free bay${r.occupied.length > 1 ? 's' : ''} ${r.occupied.map(pad).join(', ')} first, then switch machines`, null, null, 5000);
+      vibrate(80);
+      return;
+    }
+  }
   s.eventName = document.getElementById('setEvent').value.trim();
   s.priceHour = num('setHour', s.priceHour);
   s.priceFull = num('setFull', s.priceFull);
   s.priceExt = num('setExt', s.priceExt);
+  s.checkIntervalMins = Math.max(2, num('setRecheck', s.checkIntervalMins));
+  state.settingsRev = Date.now();
   saveState();
   render();
   closeSheet('settingsModal');
@@ -1195,11 +1465,13 @@ async function restoreBackup(input) {
   try {
     const parsed = JSON.parse(await file.text());
     const s = parsed.state || parsed;
-    if (!s || !Array.isArray(s.bays) || s.bays.length !== BAY_COUNT) throw new Error('bad file');
+    if (!s || !Array.isArray(s.bays) || !s.bays.length) throw new Error('bad file');
     const n = (s.history || []).length, a = s.bays.filter(b => b.occupied).length;
     const ok = await askConfirm('Restore this backup?', `It has ${a} active bays and ${n} collections. It replaces everything currently on this phone.`, 'Replace with backup');
     if (!ok) return;
     state = normalise(s);
+    state.settingsRev = Date.now();
+    state.bays.forEach(b => { b.rev = Date.now(); }); // newer than anything, so every device's next sync adopts the restore
     sync.pendingReset = true;
     saveState();
     render();
@@ -1212,12 +1484,15 @@ async function restoreBackup(input) {
 
 async function resetShift() {
   const t = totals();
-  const ok = await askConfirm('End shift and reset?', `This clears all 20 bays and the R${t.total} shift log. Download the PDF report and a backup first.`, 'Reset everything');
+  const ok = await askConfirm('End shift and reset?', `This clears all ${state.bays.length} bays and the R${t.total} shift log. Download the PDF report and a backup first.`, 'Reset everything');
   if (!ok) return;
   const keep = { ...state.settings };
   try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
   state = freshState();
   state.settings = { ...keep, lastBackup: null };
+  state.bays = Array.from({ length: validBayCount(keep.bayCount) }, (_, i) => blankBay(i + 1));
+  state.settingsRev = Date.now();
+  state.bays.forEach(b => { b.rev = Date.now(); }); // newer than anything, so every device's next sync adopts the reset
   lastRelease = null;
   sync.pendingReset = true;
   saveState();
@@ -1306,7 +1581,8 @@ function buildPdf(includePins) {
     ['Phones collected', `${ins.served}${ins.active ? ` (+${ins.active} active)` : ''}`],
     ['Avg battery gained', ins.avgGain === null ? '-' : `+${r0(ins.avgGain)}%`],
     ['Avg time on charge', ins.avgMins === null ? '-' : fmtMins(ins.avgMins)],
-    ['Avg charge speed', ins.avgRate === null ? '-' : `${r0(ins.avgRate)}% per hr`]
+    ['Avg charge speed', ins.avgRate === null ? '-' : `${r0(ins.avgRate)}% per hr`],
+    ['Speed: saver off vs on', (ins.rateSaverOff === null && ins.rateSaverOn === null) ? '-' : `${ins.rateSaverOff === null ? '-' : r0(ins.rateSaverOff) + '%'} vs ${ins.rateSaverOn === null ? '-' : r0(ins.rateSaverOn) + '%'}`]
   ];
   const gap = 3, tileW = (W - 2 * M - gap * (kpis.length - 1)) / kpis.length, tileY = 33, tileH = 18;
   kpis.forEach(([label, value], i) => {
@@ -1342,9 +1618,11 @@ function buildPdf(includePins) {
     { h: 'Bay', w: 11, a: 'center' },
     { h: 'Customer', w: 'auto' },
     { h: 'Phone / case', w: 'auto' },
-    { h: 'Option', w: 26 },
+    { h: 'Option', w: 24 },
     { h: 'Paid', w: 14, a: 'right' },
-    { h: 'Method', w: 20 },
+    { h: 'Method', w: 18 },
+    { h: 'Low power', w: 17, a: 'center' },
+    { h: 'By', w: 16 },
     { h: 'In', w: 12, a: 'center' },
     { h: 'Out', w: 12, a: 'center' },
     { h: 'Time', w: 15, a: 'right' },
@@ -1355,19 +1633,21 @@ function buildPdf(includePins) {
   ];
   if (includePins) cols.push({ h: 'Locker PIN', w: 19, a: 'center' });
 
+  const saverText = v => v === true ? 'Yes' : v === false ? 'No' : '-';
   const sorted = [...state.history].sort((a, b) => a.checkInTime - b.checkInTime);
   const body = sorted.map((h, i) => {
     const s = sessionStats(h);
     const row = [
       i + 1, pad(h.bayId), clean(h.customer) || '-', clean(h.device) || '-', clean(h.tierLabel),
-      `R${h.price}`, clean(h.paymentMethod), formatTime(h.checkInTime), formatTime(h.releasedTime),
+      `R${h.price}`, clean(h.paymentMethod), saverText(h.batterySaverOn), clean(h.releasedBy || h.by) || '-',
+      formatTime(h.checkInTime), formatTime(h.releasedTime),
       s.mins === null ? '-' : fmtMins(s.mins), battText(h.batteryIn), battText(h.batteryOut),
       s.gained === null ? '-' : `${s.gained >= 0 ? '+' : ''}${s.gained}%`, s.rate === null ? '-' : r0(s.rate)
     ];
     if (includePins) row.push(clean(h.lockerPin) || '-');
     return row;
   });
-  const foot = [['', '', `${sorted.length} session${sorted.length === 1 ? '' : 's'}`, '', '', `R${sorted.reduce((a, h) => a + h.price, 0)}`, '', '', '',
+  const foot = [['', '', `${sorted.length} session${sorted.length === 1 ? '' : 's'}`, '', '', `R${sorted.reduce((a, h) => a + h.price, 0)}`, '', '', '', '', '',
     ins.avgMins === null ? '-' : fmtMins(ins.avgMins), ins.avgIn === null ? '-' : `${r0(ins.avgIn)}%`,
     ins.avgOut === null ? '-' : `${r0(ins.avgOut)}%`, ins.avgGain === null ? '-' : `+${r0(ins.avgGain)}%`, r0(ins.avgRate)]];
   if (includePins) foot[0].push('');
@@ -1386,7 +1666,7 @@ function buildPdf(includePins) {
     showHead: 'everyPage',
     columnStyles,
     didParseCell: d => {
-      if (d.section === 'body' && d.column.index === 12 && typeof d.cell.raw === 'string' && d.cell.raw.startsWith('+')) d.cell.styles.textColor = C.green;
+      if (d.section === 'body' && d.column.index === 14 && typeof d.cell.raw === 'string' && d.cell.raw.startsWith('+')) d.cell.styles.textColor = C.green;
     }
   });
   y = doc.lastAutoTable.finalY;
@@ -1397,8 +1677,8 @@ function buildPdf(includePins) {
     if (y + 30 > H - 14) { doc.addPage(); y = 16; } else y += 10;
     sectionTitle(`Still in lockers at time of report (${active.length})`, y);
     const aCols = [
-      { h: 'Bay', w: 11, a: 'center' }, { h: 'Customer', w: 'auto' }, { h: 'Phone / case', w: 'auto' }, { h: 'Cellphone', w: 28 },
-      { h: 'Option', w: 30 }, { h: 'Paid', w: 14, a: 'right' }, { h: 'Method', w: 20 }, { h: 'In', w: 12, a: 'center' },
+      { h: 'Bay', w: 11, a: 'center' }, { h: 'Customer', w: 'auto' }, { h: 'Phone / case', w: 'auto' }, { h: 'Cellphone', w: 26 },
+      { h: 'Option', w: 28 }, { h: 'Paid', w: 14, a: 'right' }, { h: 'Method', w: 18 }, { h: 'By', w: 16 }, { h: 'In', w: 12, a: 'center' },
       { h: 'On charge', w: 20, a: 'right' }, { h: 'Batt in', w: 14, a: 'right' }, { h: 'Status', w: 22 }
     ];
     if (includePins) aCols.push({ h: 'Locker PIN', w: 19, a: 'center' });
@@ -1410,13 +1690,13 @@ function buildPdf(includePins) {
       head: [aCols.map(c => ({ content: c.h, styles: { halign: c.a || 'left' } }))],
       body: active.map(b => {
         const info = getBayStatus(b);
-        const row = [pad(b.id), clean(b.customer), clean(b.device) || '-', clean(b.phone) || '-', clean(b.tierLabel), `R${b.price}`, clean(b.paymentMethod),
+        const row = [pad(b.id), clean(b.customer), clean(b.device) || '-', clean(b.phone) || '-', clean(b.tierLabel), `R${b.price}`, clean(b.paymentMethod), clean(b.by) || '-',
           formatTime(b.checkInTime), fmtMins(info.elapsed || 0), battText(b.batteryIn), info.status === 'overdue' ? 'Overdue' : 'Charging'];
         if (includePins) row.push(clean(b.lockerPin) || '-');
         return row;
       }),
       columnStyles: aStyles,
-      didParseCell: d => { if (d.section === 'body' && d.column.index === 10 && d.cell.raw === 'Overdue') { d.cell.styles.textColor = [220, 38, 38]; d.cell.styles.fontStyle = 'bold'; } }
+      didParseCell: d => { if (d.section === 'body' && d.column.index === 11 && d.cell.raw === 'Overdue') { d.cell.styles.textColor = [220, 38, 38]; d.cell.styles.fontStyle = 'bold'; } }
     });
     y = doc.lastAutoTable.finalY;
   }
@@ -1446,6 +1726,21 @@ function buildPdf(includePins) {
     });
   }
 
+  // Bay swaps
+  const swapRows = (state.swaps || []).slice().sort((a, b) => a.at - b.at).map(sw => [pad(sw.fromBay), pad(sw.toBay), clean(sw.customer) || '-', formatTime(sw.at), clean(sw.by) || '-']);
+  if (swapRows.length) {
+    if (y + 18 + 7.5 * swapRows.length > H - 14) { doc.addPage(); y = 16; } else y += 10;
+    sectionTitle(`Bay swaps (${swapRows.length})`, y);
+    doc.autoTable({
+      ...baseTable,
+      startY: y + 3,
+      head: [['From bay', 'To bay', 'Customer', 'Time', 'By'].map(h => ({ content: h }))],
+      body: swapRows,
+      columnStyles: { 0: { cellWidth: 20, halign: 'center' }, 1: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 24 }, 4: { cellWidth: 28 } }
+    });
+    y = doc.lastAutoTable.finalY;
+  }
+
   // Footer on every page
   const pages = doc.internal.getNumberOfPages();
   for (let p = 1; p <= pages; p++) {
@@ -1466,10 +1761,13 @@ function buildPdf(includePins) {
    The viewer (sister) logs in with her own password and sees a read-only live copy. */
 const API = '/api/cv';
 const ROLE_KEY = 'cv_role';
+const NAME_KEY = 'cv_name';
 const SYNC_KEY = 'cv_sync_meta';
 const VIEW_CACHE_KEY = 'cv_viewer_cache';
-const POLL_MS = 12000;
-let role = null;            // 'owner' = stand phone, 'viewer' = read only
+const POLL_MS = 12000;        // viewer poll (sister at home)
+const OWNER_POLL_MS = 8000;   // owner poll - every team member's phone pulls in whoever else's edits
+let role = null;            // 'owner' = can run the stand, 'viewer' = read only
+let meName = '';            // whoever is logged in on this phone
 let syncAvailable = true;   // false when the API isn't there (opened as a file or not deployed)
 let sync = { dirty: false, rev: 0, lastSyncedAt: null, inFlight: false, error: null, pendingReset: false };
 let remote = { etag: null, lastFetch: null, error: null, hasData: false, updatedAt: null };
@@ -1496,16 +1794,66 @@ function alreadyNotified(bay) {
   return false;
 }
 
-// Locker PINs and cellphone numbers are removed here, before anything leaves the phone
+// Everything in local state (including locker PINs and cellphone numbers now - every
+// team member running the stand needs to see them). The server only ever shows those
+// two fields back to an owner-role session; a viewer-role GET always has them stripped.
 function publicSnapshot() {
-  const strip = ({ lockerPin, phone, ...rest }) => rest;
-  const s = state.settings;
   return {
     updatedAt: Date.now(),
-    settings: { eventName: s.eventName, priceHour: s.priceHour, priceFull: s.priceFull, priceExt: s.priceExt },
-    bays: state.bays.map(strip),
-    history: state.history.map(strip)
+    settingsRev: state.settingsRev || 0,
+    settings: { ...state.settings },
+    bays: state.bays,
+    history: state.history,
+    swaps: state.swaps || []
   };
+}
+
+function saveStateLocalOnly() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+// Folds newer server data into local state bay-by-bay (and history/swaps by id), so two
+// phones logged in as owner each see what the other one did, instead of one clobbering
+// the other's work. A bay only gets replaced if the server's copy is genuinely newer.
+function mergeServerData(serverData) {
+  if (!serverData) return false;
+  let changed = false;
+  const sBays = Array.isArray(serverData.bays) ? serverData.bays : [];
+  // Someone else's phone has more bays (bigger machine, or just more data) - grow to fit, never drop.
+  if (sBays.length > state.bays.length) {
+    for (let i = state.bays.length; i < sBays.length; i++) state.bays.push(blankBay(i + 1));
+    changed = true;
+  }
+  for (let i = 0; i < sBays.length; i++) {
+    const s = sBays[i];
+    if (!s) continue;
+    const l = state.bays[i];
+    if ((s.rev || 0) > (l.rev || 0)) { state.bays[i] = { ...blankBay(s.id), ...s }; changed = true; }
+  }
+  const haveH = new Set(state.history.map(h => h.id).filter(Boolean));
+  (Array.isArray(serverData.history) ? serverData.history : []).forEach(h => {
+    if (h.id && !haveH.has(h.id)) { state.history.push(h); haveH.add(h.id); changed = true; }
+  });
+  state.swaps = state.swaps || [];
+  const haveS = new Set(state.swaps.map(sw => sw.id).filter(Boolean));
+  (Array.isArray(serverData.swaps) ? serverData.swaps : []).forEach(sw => {
+    if (sw.id && !haveS.has(sw.id)) { state.swaps.push(sw); haveS.add(sw.id); changed = true; }
+  });
+  if ((Number(serverData.settingsRev) || 0) > (state.settingsRev || 0)) {
+    state.settings = { ...DEFAULT_SETTINGS, ...(serverData.settings || {}) };
+    state.settings.bayCount = validBayCount(state.settings.bayCount);
+    state.settingsRev = Number(serverData.settingsRev) || 0;
+    // The machine-size setting changed elsewhere - match it here too, but only shrink
+    // when every bay beyond the new count is free; otherwise just grow and leave the
+    // mismatch for the next safe merge (never drops an active session in the background).
+    resizeBays(state.settings.bayCount);
+    changed = true;
+  }
+  if (changed) {
+    state.history.sort((a, b) => (b.releasedTime || b.checkInTime || 0) - (a.releasedTime || a.checkInTime || 0));
+    state.swaps.sort((a, b) => (b.at || 0) - (a.at || 0));
+  }
+  return changed;
 }
 
 function markDirty() {
@@ -1535,7 +1883,8 @@ async function pushNow() {
       sync.lastSyncedAt = Date.now();
       sync.error = null;
     } else if (r.status === 401) sync.error = 'login';
-    else if (r.status === 409) { sync.inFlight = false; sync.error = null; await adoptServer(true); return; }
+    // Someone else's phone has real data and ours looked empty - pull it in and merge, don't push blind
+    else if (r.status === 409) { sync.inFlight = false; sync.error = null; await pullAndMerge(); sync.dirty = hasActivity(state); saveSyncMeta(); updateSyncUi(); return; }
     else if (r.status === 404 || r.status === 503) sync.error = 'setup';
     else sync.error = 'server';
   } catch (e) { sync.error = 'offline'; }
@@ -1545,26 +1894,11 @@ async function pushNow() {
   if (sync.dirty && !sync.error) pushTimer = setTimeout(pushNow, 1500);
 }
 
-// New or wiped stand phone: take the online copy instead of overwriting it with nothing
-async function adoptServer(fromConflict) {
-  try {
-    const r = await apiFetch('state');
-    if (!r.ok) return false;
-    const j = await r.json();
-    if (!hasActivity(j.data)) return false;
-    if (!fromConflict && hasActivity(state)) return false;
-    state = normalise(j.data);
-    lsSet(STORAGE_KEY, JSON.stringify(state));
-    sync.dirty = false; sync.pendingReset = false; sync.lastSyncedAt = Date.now(); sync.error = null;
-    saveSyncMeta();
-    render();
-    showToast('Loaded the latest data from the online copy');
-    return true;
-  } catch (e) { return false; }
-}
-
-async function pollRemote() {
-  if (role !== 'viewer' || document.hidden) return;
+// Pulls the shared live copy and folds it in. Viewer role just mirrors it; owner role
+// (any team member's phone) merges it bay-by-bay so everyone converges on the same data
+// without one phone's local copy silently overwriting another's.
+async function pullAndMerge() {
+  if (!syncAvailable) return;
   try {
     const r = await apiFetch('state', { headers: remote.etag ? { 'X-CV-ETag': remote.etag } : {} });
     if (r.status === 401) return sessionExpired();
@@ -1574,10 +1908,14 @@ async function pollRemote() {
       remote.etag = j.etag || null;
       remote.hasData = !!j.data;
       remote.updatedAt = j.data ? j.data.updatedAt : null;
-      state = j.data ? normalise(j.data) : freshState();
-      lsSet(VIEW_CACHE_KEY, JSON.stringify(j.data || null));
-      render();
-      refreshOpenSheets();
+      if (role === 'viewer') {
+        state = j.data ? normalise(j.data) : freshState();
+        lsSet(VIEW_CACHE_KEY, JSON.stringify(j.data || null));
+        render();
+        refreshOpenSheets();
+      } else if (role === 'owner' && j.data) {
+        if (mergeServerData(j.data)) { saveStateLocalOnly(); render(); refreshOpenSheets(); }
+      }
     }
     remote.lastFetch = Date.now();
     remote.error = null;
@@ -1635,9 +1973,9 @@ function updateSyncUi() {
 }
 
 function onSyncTap() {
-  if (role === 'viewer') { pollRemote(); showToast('Refreshing...'); return; }
+  if (role === 'viewer') { pullAndMerge(); showToast('Refreshing...'); return; }
   if (sync.error === 'login') { showLogin(); return; }
-  if (syncAvailable) forceSync();
+  if (syncAvailable) { pullAndMerge(); forceSync(); }
 }
 
 /* Login */
@@ -1661,10 +1999,11 @@ async function doLogin() {
     if (r.ok && j.role) {
       input.value = '';
       lsSet(ROLE_KEY, j.role);
+      lsSet(NAME_KEY, j.name || (j.role === 'viewer' ? 'Viewer' : 'Owner'));
       syncAvailable = true;
       sync.error = null;
-      startAs(j.role);
-      showToast(j.role === 'viewer' ? 'Logged in · live view' : 'Logged in · stand phone');
+      startAs(j.role, j.name);
+      showToast(`Logged in as ${j.name || (j.role === 'viewer' ? 'Viewer' : 'Owner')}`);
       if (j.role === 'owner') forceSync();
     } else if (r.status === 401) err.textContent = 'Wrong password.';
     else if (r.status === 503) err.textContent = 'Passwords are not set up on Vercel yet.';
@@ -1676,10 +2015,12 @@ async function doLogin() {
   btn.disabled = false; btn.textContent = 'Log in';
 }
 
-function continueOffline() { startAs(lsGet(ROLE_KEY) || 'owner'); }
+function continueOffline() { startAs(lsGet(ROLE_KEY) || 'owner', lsGet(NAME_KEY)); }
 
-function startAs(r) {
+function startAs(r, name) {
   role = r;
+  meName = name || lsGet(NAME_KEY) || (role === 'owner' ? 'Owner' : 'Viewer');
+  lsSet(NAME_KEY, meName);
   closeLogin();
   document.body.classList.toggle('viewer', role === 'viewer');
   clearInterval(pollTimer);
@@ -1690,15 +2031,14 @@ function startAs(r) {
       if (c) { state = normalise(c); remote.updatedAt = c.updatedAt; remote.hasData = true; }
     } catch (e) {}
     render();
-    pollRemote();
-    pollTimer = setInterval(pollRemote, POLL_MS);
+    pullAndMerge();
+    pollTimer = setInterval(pullAndMerge, POLL_MS);
   } else {
     loadState();
     render();
     if (syncAvailable) {
-      adoptServer(false).then(adopted => {
-        if (!adopted && hasActivity(state) && (sync.dirty || !sync.lastSyncedAt)) { sync.dirty = true; pushNow(); }
-      });
+      pullAndMerge().then(() => { if (hasActivity(state) && (sync.dirty || !sync.lastSyncedAt)) { sync.dirty = true; pushNow(); } });
+      pollTimer = setInterval(pullAndMerge, OWNER_POLL_MS);
     }
   }
 }
@@ -1717,6 +2057,7 @@ async function logout() {
   try { await apiFetch('logout', { method: 'POST' }); } catch (e) {}
   if (role === 'viewer') lsSet(VIEW_CACHE_KEY, null);
   lsSet(ROLE_KEY, null);
+  lsSet(NAME_KEY, null);
   clearInterval(pollTimer);
   role = null;
   ['settingsModal', 'historyModal', 'bayModal'].forEach(closeSheet);
@@ -1730,13 +2071,13 @@ function openViewerSettings() {
   document.getElementById('setSub').textContent = 'Live view from the stand';
   document.getElementById('settingsBody').innerHTML = `
     <div class="details">
-      <div class="row"><span>Logged in as</span><strong>Viewer (read only)</strong></div>
+      <div class="row"><span>Logged in as</span><strong>${escapeHtml(meName || 'Viewer')} (read only)</strong></div>
       <div class="row"><span>Event</span><strong>${escapeHtml(state.settings.eventName || 'Not set')}</strong></div>
       <div class="row"><span>Stand last synced</span><strong>${remote.updatedAt ? `${formatDate(remote.updatedAt)}, ${formatTime(remote.updatedAt)}` : 'Not yet'}</strong></div>
     </div>
     <div class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
       <span>This screen refreshes every ${POLL_MS / 1000} seconds while it is open. If the stand has no signal, its sales show up here as soon as it reconnects.</span></div>
-    <button class="btn btn-soft" onclick="pollRemote(); showToast('Refreshing...')">Refresh now</button>
+    <button class="btn btn-soft" onclick="pullAndMerge(); showToast('Refreshing...')">Refresh now</button>
     <button class="btn btn-soft" style="color:var(--red-text)" onclick="logout()">Log out</button>`;
   openSheet('settingsModal');
 }
@@ -1744,20 +2085,21 @@ function openViewerSettings() {
 async function boot() {
   loadSyncMeta();
   const cached = lsGet(ROLE_KEY);
-  if (location.protocol === 'file:') { syncAvailable = false; return startAs('owner'); }
+  const cachedName = lsGet(NAME_KEY);
+  if (location.protocol === 'file:') { syncAvailable = false; return startAs('owner', cachedName || 'Owner'); }
   try {
     const r = await apiFetch('me');
-    if (r.ok) { const j = await r.json(); lsSet(ROLE_KEY, j.role); return startAs(j.role); }
-    if (r.status === 404 || r.status === 503) { syncAvailable = false; return startAs(cached === 'viewer' ? 'viewer' : 'owner'); }
+    if (r.ok) { const j = await r.json(); lsSet(ROLE_KEY, j.role); lsSet(NAME_KEY, j.name); return startAs(j.role, j.name); }
+    if (r.status === 404 || r.status === 503) { syncAvailable = false; return startAs(cached === 'viewer' ? 'viewer' : 'owner', cachedName); }
     showLogin();
   } catch (e) {
     // No signal: trust the role this phone had last time so the stand keeps working
-    if (cached) return startAs(cached);
+    if (cached) return startAs(cached, cachedName);
     showLogin(true);
   }
 }
 
-window.addEventListener('online', () => { if (role === 'viewer') pollRemote(); else pushNow(); });
+window.addEventListener('online', () => { if (role === 'viewer') pullAndMerge(); else { pullAndMerge(); pushNow(); } });
 window.addEventListener('offline', updateSyncUi);
 setInterval(() => { if (role === 'owner' && sync.dirty) pushNow(); else updateSyncUi(); }, 20000);
 
@@ -1789,7 +2131,7 @@ async function keepAwake() {
   try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch (e) {}
 }
 document.addEventListener('click', keepAwake, { once: true });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { render(); keepAwake(); if (role === 'viewer') pollRemote(); else pushNow(); } });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { render(); keepAwake(); pullAndMerge(); if (role === 'owner') pushNow(); } });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if (document.getElementById('confirmModal').classList.contains('open')) answerConfirm(false);
